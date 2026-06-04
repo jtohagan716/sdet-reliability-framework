@@ -1,0 +1,10 @@
+environment: dev
+
+application:
+  base_url: https://www.saucedemo.com
+
+timeouts:
+  default_timeout: 5000
+
+reporting:
+  log_level: INFO
