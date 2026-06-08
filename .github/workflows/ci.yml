@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
       - name: Checkout repository
@@ -24,10 +24,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run pytest
-        run: |
-          pytest -s
-      - name: Upload performance artifacts
+      - name: Run tests
+        run: pytest -s
+
+      - name: Upload performance reports
         uses: actions/upload-artifact@v4
         with:
           name: performance-reports
