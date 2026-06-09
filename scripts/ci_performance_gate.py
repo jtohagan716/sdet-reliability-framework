@@ -1,5 +1,4 @@
 import sys
-import json
 
 from framework.performance.runner import run_performance_suite
 
@@ -19,21 +18,21 @@ def main():
     print(f"Verdict: {verdict}")
 
     # -----------------------------
-    # CI FAILURE CONDITIONS
+    # FAILURE CONDITIONS
     # -----------------------------
     if score < 70:
-        print("\n❌ FAILED: Reliability score too low")
+        print("\nCI FAILED: Low reliability score")
         sys.exit(1)
 
     if result.get("regression") == "REGRESSION":
-        print("\n❌ FAILED: Performance regression detected")
+        print("\nCI FAILED: Performance regression detected")
         sys.exit(1)
 
     if result.get("trend") == "DEGRADING":
-        print("\n❌ FAILED: Negative performance trend")
+        print("\nCI FAILED: Negative performance trend")
         sys.exit(1)
 
-    print("\n✅ CI GATE PASSED")
+    print("\nCI GATE PASSED")
     sys.exit(0)
 
 
