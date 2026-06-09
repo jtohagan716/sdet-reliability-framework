@@ -1,0 +1,6 @@
+{
+    "url": "https://example.com",
+    "iterations": 3,
+    "threshold_ms": 500,
+    "stdev_limit": 800
+}
