@@ -3,103 +3,128 @@ import os
 import statistics
 
 REPORT_FILE = "reports/logs/performance_report.csv"
-WINDOW_SIZE = 5  # rolling baseline window
 
 
-def get_average_history():
+# -----------------------------
+# GENERIC CSV LOADER
+# -----------------------------
+def _load_column(column: str):
     if not os.path.exists(REPORT_FILE):
         return []
 
-    history = []
+    values = []
 
     with open(REPORT_FILE, newline="") as f:
         reader = csv.DictReader(f)
 
         for row in reader:
             try:
-                history.append(float(row["avg_ms"]))
+                values.append(float(row[column]))
             except (KeyError, ValueError):
                 continue
 
-    return history
+    return values
 
 
-def get_rolling_window():
-    history = get_average_history()
-    return history[-WINDOW_SIZE:]
+# -----------------------------
+# HISTORY (AVG)
+# -----------------------------
+def get_average_history():
+    return _load_column("avg_ms")
 
 
+# -----------------------------
+# HISTORY (P95)
+# -----------------------------
+def get_p95_history():
+    return _load_column("p95_ms")
+
+
+# -----------------------------
+# BASELINE (median of averages)
+# -----------------------------
 def get_baseline():
-    window = get_rolling_window()
+    history = get_average_history()
 
-    if len(window) < 3:
+    if len(history) < 3:
         return None
 
-    return statistics.mean(window)
+    return statistics.median(history)
 
 
-def get_volatility():
-    window = get_rolling_window()
+# -----------------------------
+# TREND ANALYSIS
+# -----------------------------
+def get_trend():
+    history = get_average_history()
 
-    if len(window) < 2:
-        return 0.0
+    if len(history) < 2:
+        return "INSUFFICIENT_DATA"
 
-    mean = statistics.mean(window)
-    stdev = statistics.stdev(window)
+    if history[-1] > history[-2]:
+        return "DEGRADING"
 
-    if mean == 0:
-        return 0.0
+    if history[-1] < history[-2]:
+        return "IMPROVING"
 
-    return stdev / mean  # coefficient of variation
+    return "UNCHANGED"
 
 
-def detect_regression(current_value: float):
-    baseline = get_baseline()
-    volatility = get_volatility()
+# -----------------------------
+# AVG REGRESSION DETECTION
+# -----------------------------
+def detect_regression(current_value: float, threshold: float = 0.15):
+    history = get_average_history()
 
-    if baseline is None:
+    if len(history) < 2:
         return {
             "status": "INSUFFICIENT_DATA",
             "baseline": None,
-            "volatility": volatility
+            "allowed_max": None,
         }
 
-    # adaptive threshold (this is key upgrade)
-    threshold = 0.2 + volatility
-
+    baseline = statistics.median(history)
     allowed_max = baseline * (1 + threshold)
 
     if current_value > allowed_max:
-        if current_value > baseline * 1.5:
-            status = "SEVERE_REGRESSION"
-        else:
-            status = "REGRESSION"
-    else:
-        status = "OK"
+        return {
+            "status": "REGRESSION",
+            "baseline": baseline,
+            "allowed_max": allowed_max,
+        }
 
     return {
-        "status": status,
-        "baseline": round(baseline, 2),
-        "current": current_value,
-        "allowed_max": round(allowed_max, 2),
-        "volatility": round(volatility, 3)
+        "status": "OK",
+        "baseline": baseline,
+        "allowed_max": allowed_max,
     }
 
 
-def get_summary():
-    history = get_rolling_window()
+# -----------------------------
+# P95 REGRESSION DETECTION
+# -----------------------------
+def detect_p95_regression(current_p95: float, threshold: float = 0.15):
+    history = get_p95_history()
 
     if len(history) < 2:
-        return {"trend": "INSUFFICIENT_DATA"}
+        return {
+            "status": "INSUFFICIENT_DATA",
+            "baseline": None,
+            "allowed_max": None,
+        }
 
-    latest = history[-1]
-    previous = history[-2]
+    baseline = statistics.median(history)
+    allowed_max = baseline * (1 + threshold)
 
-    trend = "IMPROVING" if latest < previous else "DEGRADING" if latest > previous else "STABLE"
+    if current_p95 > allowed_max:
+        return {
+            "status": "REGRESSION",
+            "baseline": baseline,
+            "allowed_max": allowed_max,
+        }
 
     return {
-        "trend": trend,
-        "latest_ms": latest,
-        "previous_ms": previous,
-        "volatility": get_volatility()
+        "status": "OK",
+        "baseline": baseline,
+        "allowed_max": allowed_max,
     }

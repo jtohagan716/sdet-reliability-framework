@@ -4,10 +4,14 @@ on:
   push:
     branches: [ main ]
   pull_request:
+    branches: [ main ]
 
 jobs:
   test:
     runs-on: windows-latest
+
+    env:
+      PYTHONPATH: ${{ github.workspace }}
 
     steps:
       - name: Checkout repository
@@ -23,18 +27,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Set PYTHONPATH
-        run: echo "PYTHONPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-
-      - name: Run pytest suite
+      - name: Run tests
         run: pytest -s
 
-      - name: Run performance regression gate
+      - name: Run Performance CI Gate
         run: python scripts/ci_performance_gate.py
-
-      - name: Upload performance reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: performance-reports
-          path: reports/logs/

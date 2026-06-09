@@ -1,31 +1,40 @@
 import sys
-import os
-
-# 🔥 Force repo root onto Python path (CI-safe)
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+import json
 
 from framework.performance.runner import run_performance_suite
-import sys as system_exit
 
 
 def main():
-    result = run_performance_suite(
-        "https://example.com",
-        iterations=5,
-        threshold_ms=3000
-    )
+    url = "https://example.com"
+    iterations = 8
+    threshold = 3000
 
-    print("\nCI PERFORMANCE GATE RESULT")
-    print(result)
+    result = run_performance_suite(url, iterations, threshold)
 
-    status = result.get("status")
+    score = result.get("reliability_score", 0)
+    verdict = result.get("verdict", "UNKNOWN")
 
-    if status in ["REGRESSION", "SEVERE_REGRESSION", "FAIL_STABILITY", "FAIL_TREND"]:
-        print("CI FAIL: Performance regression detected")
-        system_exit.exit(1)
+    print("\n=== CI PERFORMANCE GATE ===")
+    print(f"Reliability Score: {score}")
+    print(f"Verdict: {verdict}")
 
-    print("CI PASS: Performance within acceptable bounds")
-    system_exit.exit(0)
+    # -----------------------------
+    # CI FAILURE CONDITIONS
+    # -----------------------------
+    if score < 70:
+        print("\n❌ FAILED: Reliability score too low")
+        sys.exit(1)
+
+    if result.get("regression") == "REGRESSION":
+        print("\n❌ FAILED: Performance regression detected")
+        sys.exit(1)
+
+    if result.get("trend") == "DEGRADING":
+        print("\n❌ FAILED: Negative performance trend")
+        sys.exit(1)
+
+    print("\n✅ CI GATE PASSED")
+    sys.exit(0)
 
 
 if __name__ == "__main__":
