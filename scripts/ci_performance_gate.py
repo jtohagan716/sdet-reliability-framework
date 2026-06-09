@@ -1,5 +1,11 @@
-from framework.performance.runner import run_performance_suite
 import sys
+import os
+
+# 🔥 Force repo root onto Python path (CI-safe)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from framework.performance.runner import run_performance_suite
+import sys as system_exit
 
 
 def main():
@@ -14,12 +20,12 @@ def main():
 
     status = result.get("status")
 
-    if status in ["REGRESSION", "SEVERE_REGRESSION"]:
+    if status in ["REGRESSION", "SEVERE_REGRESSION", "FAIL_STABILITY", "FAIL_TREND"]:
         print("CI FAIL: Performance regression detected")
-        sys.exit(1)
+        system_exit.exit(1)
 
     print("CI PASS: Performance within acceptable bounds")
-    sys.exit(0)
+    system_exit.exit(0)
 
 
 if __name__ == "__main__":
