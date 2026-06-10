@@ -1,0 +1,66 @@
+[
+  {
+    "reliability_score": 99.62,
+    "avg_ms": 413.4,
+    "p95": null,
+    "p99": null,
+    "status": "PASS",
+    "timestamp": "2026-06-09T20:13:51.586311"
+  },
+  {
+    "reliability_score": 100,
+    "avg_ms": 410.48,
+    "p95": null,
+    "p99": null,
+    "status": "PASS",
+    "timestamp": "2026-06-09T20:15:56.691405"
+  },
+  {
+    "reliability_score": 80.33,
+    "avg_ms": 448.58,
+    "p95": null,
+    "p99": null,
+    "status": "FAIL_STABILITY",
+    "timestamp": "2026-06-09T20:21:15.150108"
+  },
+  {
+    "reliability_score": 100,
+    "avg_ms": 404.53,
+    "p95": null,
+    "p99": null,
+    "status": "PASS",
+    "timestamp": "2026-06-09T20:22:17.376375"
+  },
+  {
+    "reliability_score": 100,
+    "avg_ms": 411.94,
+    "p95": null,
+    "p99": null,
+    "status": "PASS",
+    "timestamp": "2026-06-09T20:22:24.059641"
+  },
+  {
+    "reliability_score": 100,
+    "avg_ms": 405.73,
+    "p95": null,
+    "p99": null,
+    "status": "PASS",
+    "timestamp": "2026-06-09T20:22:30.598566"
+  },
+  {
+    "reliability_score": 100,
+    "avg_ms": 405.49,
+    "p95": null,
+    "p99": null,
+    "status": "PASS",
+    "timestamp": "2026-06-09T20:25:49.412209"
+  },
+  {
+    "reliability_score": 100,
+    "avg_ms": 413.03,
+    "p95": null,
+    "p99": null,
+    "status": "PASS",
+    "timestamp": "2026-06-09T20:25:55.810747"
+  }
+]

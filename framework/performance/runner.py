@@ -1,4 +1,7 @@
+from unittest import result
+
 from framework.reliability.reliability_score import calculate_reliability_score
+from framework.reliability.release_risk import calculate_release_risk
 from framework.performance.api_latency import measure_api_latency
 from framework.reliability.trend_analyzer import (
     detect_regression,
@@ -54,6 +57,11 @@ def run_performance_suite(url: str, iterations: int, threshold_ms: int):
     result["verdict"] = reliability.verdict
     result["score_breakdown"] = reliability.breakdown
 
+    risk = calculate_release_risk(result)
+
+    result["risk_level"] = risk["risk_level"]
+    result["risk_points"] = risk["risk_points"]
+
 
 
     # -----------------------------
@@ -105,6 +113,10 @@ def run_performance_suite(url: str, iterations: int, threshold_ms: int):
     print(f"Score: {reliability.score}/100")
     print(f"Verdict: {reliability.verdict}")
     print(f"Breakdown: {reliability.breakdown}")
+
+    print("\n=== RELEASE RISK ===")
+    print(f"Risk Level: {result['risk_level']}")
+    print(f"Risk Points: {result['risk_points']}")
 
     print("[PERF END]")
 
