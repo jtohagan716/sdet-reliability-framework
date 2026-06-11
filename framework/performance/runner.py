@@ -86,11 +86,16 @@ threshold_ms: int,
     # RELIABILITY SCORE
     # ==================================================
 
-    reliability = calculate_reliability_score(result)
+# ==================================================
+# RELIABILITY SCORE
+# ==================================================
 
-    result["reliability_score"] = reliability["score"]
-    result["verdict"] = reliability["verdict"]
-    result["score_breakdown"] = reliability["breakdown"]
+    reliability = calculate_reliability_score(result, trend)
+
+    result["reliability_score"] = reliability.score
+    result["verdict"] = reliability.verdict
+    result["score_breakdown"] = reliability.breakdown
+    
 
     # ==================================================
     # RELEASE RISK
