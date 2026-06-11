@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
+import os
 
 
 REPORT_FILE = "reports/logs/performance_report.csv"
@@ -21,24 +22,87 @@ def build_dashboard():
         print("No data available.")
         return
 
-    plt.figure(figsize=(12, 6))
+    os.makedirs("reports/dashboard", exist_ok=True)
 
-    plt.plot(
+    # Convert risk levels to numeric values
+    risk_mapping = {
+        "LOW": 1,
+        "MEDIUM": 2,
+        "HIGH": 3
+    }
+
+    if "risk_level" in df.columns:
+        df["risk_numeric"] = df["risk_level"].map(risk_mapping)
+
+    fig, axs = plt.subplots(2, 2, figsize=(14, 10))
+
+    # -------------------------------------------------
+    # Average Latency
+    # -------------------------------------------------
+
+    axs[0, 0].plot(
         df.index,
         df["avg_ms"],
-        marker="o",
-        label="Average Latency"
+        marker="o"
     )
 
-    plt.title("Performance Trend Dashboard")
+    axs[0, 0].set_title("Average Latency")
+    axs[0, 0].set_ylabel("Milliseconds")
+    axs[0, 0].grid(True)
 
-    plt.xlabel("Test Run")
+    # -------------------------------------------------
+    # P95 Latency
+    # -------------------------------------------------
 
-    plt.ylabel("Latency (ms)")
+    if "p95_ms" in df.columns:
 
-    plt.grid(True)
+        axs[0, 1].plot(
+            df.index,
+            df["p95_ms"],
+            marker="o"
+        )
 
-    plt.legend()
+        axs[0, 1].set_title("P95 Latency")
+        axs[0, 1].set_ylabel("Milliseconds")
+        axs[0, 1].grid(True)
+
+    # -------------------------------------------------
+    # Reliability Score
+    # -------------------------------------------------
+
+    if "reliability_score" in df.columns:
+
+        axs[1, 0].plot(
+            df.index,
+            df["reliability_score"],
+            marker="o"
+        )
+
+        axs[1, 0].set_title("Reliability Score")
+        axs[1, 0].set_ylabel("Score")
+        axs[1, 0].grid(True)
+
+    # -------------------------------------------------
+    # Risk Trend
+    # -------------------------------------------------
+
+    if "risk_numeric" in df.columns:
+
+        axs[1, 1].plot(
+            df.index,
+            df["risk_numeric"],
+            marker="o"
+        )
+
+        axs[1, 1].set_title("Release Risk Trend")
+        axs[1, 1].set_ylabel("Risk")
+
+        axs[1, 1].set_yticks([1, 2, 3])
+        axs[1, 1].set_yticklabels(
+            ["LOW", "MEDIUM", "HIGH"]
+        )
+
+        axs[1, 1].grid(True)
 
     plt.tight_layout()
 
