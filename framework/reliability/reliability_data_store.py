@@ -3,6 +3,7 @@ from pathlib import Path
 
 
 class ReliabilityDataStore:
+
     def __init__(self, db_path="reports/reliability_data.db"):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -91,15 +92,59 @@ class ReliabilityDataStore:
 
             rows = cursor.fetchall()
 
-        return [
-            {
-                "timestamp": row[0],
-                "journey_name": row[1],
-                "status": row[2],
-                "duration_ms": row[3],
-                "signal": row[4],
-                "health": row[5],
-                "decision": row[6],
-            }
-            for row in rows
-        ]
+        results = []
+
+        for row in rows:
+            results.append(
+                {
+                    "timestamp": row[0],
+                    "journey_name": row[1],
+                    "status": row[2],
+                    "duration_ms": row[3],
+                    "signal": row[4],
+                    "health": row[5],
+                    "decision": row[6],
+                }
+            )
+
+        return results
+
+    def fetch_results_by_journey(self, journey_name: str):
+        with self.connect() as connection:
+            cursor = connection.cursor()
+
+            cursor.execute(
+                """
+                SELECT
+                    timestamp,
+                    journey_name,
+                    status,
+                    duration_ms,
+                    signal,
+                    health,
+                    decision
+                FROM synthetic_transaction_results
+                WHERE journey_name = ?
+                ORDER BY id
+                """,
+                (journey_name,),
+            )
+
+            rows = cursor.fetchall()
+
+        results = []
+
+        for row in rows:
+            results.append(
+                {
+                    "timestamp": row[0],
+                    "journey_name": row[1],
+                    "status": row[2],
+                    "duration_ms": row[3],
+                    "signal": row[4],
+                    "health": row[5],
+                    "decision": row[6],
+                }
+            )
+
+        return results
