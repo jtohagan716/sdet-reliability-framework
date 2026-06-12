@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  python-reliability-tests:
     runs-on: windows-latest
 
     env:
@@ -22,13 +22,34 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run tests
-        run: pytest -s
+      - name: Run Python reliability test suite
+        run: python -m pytest -q
 
       - name: Run Performance CI Gate
         run: python scripts/ci_performance_gate.py
+
+  playwright-synthetic-canary:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install
+
+      - name: Run Playwright synthetic canary
+        run: npx playwright test tests/ui/canary.spec.ts
