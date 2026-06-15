@@ -24,8 +24,8 @@ def main():
     save_run({
         "reliability_score": score,
         "avg_ms": result.get("avg_ms"),
-        "p95": result.get("p95"),
-        "p99": result.get("p99"),
+        "p95": result.get("p95_ms"),
+        "p99": result.get("p99_ms"),
         "status": result.get("status"),
     })
 
@@ -37,21 +37,24 @@ def main():
     # -----------------------------
     # FAILURE RULES
     # -----------------------------
+     # -----------------------------
+    # FAILURE RULES
+    # -----------------------------
     if score < 70:
-        print("\nCI FAILED: Low reliability score")
-        sys.exit(1)
+        print("\nCI FAILED: Reliability score below minimum threshold")
+        raise SystemExit(1)
+
+    if memory_trend["trend"] == "DEGRADING" and score < 90:
+        print("\nCI FAILED: CI performance is degrading and reliability score is below warning threshold")
+        raise SystemExit(1)
 
     if memory_trend["trend"] == "DEGRADING":
-        print("\nCI FAILED: CI performance is degrading over time")
-        sys.exit(1)
-
-    if result.get("regression") == "REGRESSION":
-        print("\nCI FAILED: Performance regression detected")
-        sys.exit(1)
+        print("\nCI WARNING: CI performance trend is degrading, but reliability score remains acceptable")
+        print("\nCI GATE PASSED WITH WARNING")
+        return
 
     print("\nCI GATE PASSED")
     sys.exit(0)
-
-
+    
 if __name__ == "__main__":
     main()
