@@ -1,23 +1,34 @@
+from framework.fhir.validation_engine import (
+    validate_allowed_values,
+    validate_required_fields,
+    validate_resource_type,
+)
+
+
 VALID_GENDERS = ["male", "female", "other", "unknown"]
 
 
 def validate_patient_resource(patient: dict) -> dict:
     errors = []
 
-    if patient.get("resourceType") != "Patient":
-        errors.append("resourceType must be Patient")
+    errors.extend(
+        validate_resource_type(patient, "Patient")
+    )
 
-    if "identifier" not in patient or not patient["identifier"]:
-        errors.append("Patient identifier is required")
+    errors.extend(
+        validate_required_fields(
+            patient,
+            ["identifier", "name", "birthDate"],
+        )
+    )
 
-    if "name" not in patient or not patient["name"]:
-        errors.append("Patient name is required")
-
-    if "birthDate" not in patient:
-        errors.append("Patient birthDate is required")
-
-    if "gender" in patient and patient["gender"] not in VALID_GENDERS:
-        errors.append("Patient gender is invalid")
+    errors.extend(
+        validate_allowed_values(
+            patient,
+            "gender",
+            VALID_GENDERS,
+        )
+    )
 
     return {
         "valid": len(errors) == 0,

@@ -44,7 +44,7 @@ def test_patient_resource_requires_identifier():
     result = validate_patient_resource(patient)
 
     assert result["valid"] is False
-    assert "Patient identifier is required" in result["errors"]
+    assert "identifier is required" in result["errors"]
 
 
 def test_patient_resource_rejects_invalid_gender():
@@ -70,4 +70,4 @@ def test_patient_resource_rejects_invalid_gender():
     result = validate_patient_resource(patient)
 
     assert result["valid"] is False
-    assert "Patient gender is invalid" in result["errors"]
+    assert "gender has invalid value" in result["errors"]
