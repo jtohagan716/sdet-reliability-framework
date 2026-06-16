@@ -36,6 +36,9 @@ def validate_encounter_resource(encounter: dict):
                 "id",
                 "status",
                 "subject",
+                "participant",
+                "location",
+                "serviceProvider",
             ],
         )
     )
