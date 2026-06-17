@@ -21,6 +21,21 @@ def valid_patient():
     }
 
 
+def valid_appointment():
+    return {
+        "resourceType": "Appointment",
+        "id": "appt001",
+        "status": "booked",
+        "participant": [
+            {
+                "actor": {
+                    "reference": "Patient/12345",
+                }
+            }
+        ],
+    }
+
+
 def valid_encounter():
     return {
         "resourceType": "Encounter",
@@ -29,6 +44,11 @@ def valid_encounter():
         "subject": {
             "reference": "Patient/12345",
         },
+        "appointment": [
+            {
+                "reference": "Appointment/appt001",
+            }
+        ],
         "participant": [
             {
                 "individual": {
@@ -53,6 +73,7 @@ def test_valid_clinical_workflow():
 
     result = validate_clinical_workflow(
         valid_patient(),
+        valid_appointment(),
         valid_encounter(),
     )
 
@@ -67,11 +88,27 @@ def test_clinical_workflow_fails_when_patient_invalid():
 
     result = validate_clinical_workflow(
         patient,
+        valid_appointment(),
         valid_encounter(),
     )
 
     assert result["valid"] is False
     assert "identifier is required" in result["errors"]
+
+
+def test_clinical_workflow_fails_when_appointment_invalid():
+
+    appointment = valid_appointment()
+    appointment.pop("participant")
+
+    result = validate_clinical_workflow(
+        valid_patient(),
+        appointment,
+        valid_encounter(),
+    )
+
+    assert result["valid"] is False
+    assert "participant is required" in result["errors"]
 
 
 def test_clinical_workflow_fails_when_encounter_invalid():
@@ -81,11 +118,27 @@ def test_clinical_workflow_fails_when_encounter_invalid():
 
     result = validate_clinical_workflow(
         valid_patient(),
+        valid_appointment(),
         encounter,
     )
 
     assert result["valid"] is False
     assert "participant is required" in result["errors"]
+
+
+def test_clinical_workflow_fails_when_appointment_references_wrong_patient():
+
+    appointment = valid_appointment()
+    appointment["participant"][0]["actor"]["reference"] = "Patient/99999"
+
+    result = validate_clinical_workflow(
+        valid_patient(),
+        appointment,
+        valid_encounter(),
+    )
+
+    assert result["valid"] is False
+    assert "Appointment references incorrect Patient" in result["errors"]
 
 
 def test_clinical_workflow_fails_when_encounter_references_wrong_patient():
@@ -95,8 +148,24 @@ def test_clinical_workflow_fails_when_encounter_references_wrong_patient():
 
     result = validate_clinical_workflow(
         valid_patient(),
+        valid_appointment(),
         encounter,
     )
 
     assert result["valid"] is False
     assert "Encounter references incorrect Patient" in result["errors"]
+
+
+def test_clinical_workflow_fails_when_encounter_references_wrong_appointment():
+
+    encounter = valid_encounter()
+    encounter["appointment"][0]["reference"] = "Appointment/appt999"
+
+    result = validate_clinical_workflow(
+        valid_patient(),
+        valid_appointment(),
+        encounter,
+    )
+
+    assert result["valid"] is False
+    assert "Encounter references incorrect Appointment" in result["errors"]
