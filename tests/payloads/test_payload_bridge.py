@@ -83,3 +83,17 @@ def test_bridge_preserves_static_fields():
         result["updatedObject"]["facilityNcid"]
         == "1048021"
     )
+
+def test_bridge_trace_mode_prints_payload_journey():
+
+    result = bridge_replace_payload_values(
+        sample_payload(),
+        {
+            "appointmentId": "APT999",
+            "encounterId": "ENC999999",
+            "sessionId": "SESSION999",
+        },
+        trace=True,
+    )
+
+    assert result["integrityVerified"] is True

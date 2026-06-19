@@ -76,3 +76,19 @@ def test_unknown_payload():
     result = inspect_payload(payload)
 
     assert result["notes"] != []
+
+def test_rosetta_trace_mode_prints_detection_steps():
+
+    transaction = {
+        "transactionType": "PATIENT_CHECK_IN",
+        "appointmentId": "APT001",
+        "encounterId": "ENC000001",
+    }
+
+    payload = encode_json_as_base64_zlib(transaction)
+
+    result = inspect_payload(payload, trace=True)
+
+    assert "BASE64" in result["detectedFormats"]
+    assert "ZLIB_COMPRESSED" in result["detectedFormats"]
+    assert "JSON" in result["detectedFormats"]
