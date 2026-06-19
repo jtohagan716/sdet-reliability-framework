@@ -47,3 +47,4 @@ def test_transport_transaction_returns_transport_metrics():
     assert result["transportMetrics"]["compressedSizeBytes"] > 0
     assert result["transportMetrics"]["base64SizeBytes"] > 0
     assert result["transportMetrics"]["recommendation"] is not None
+    
