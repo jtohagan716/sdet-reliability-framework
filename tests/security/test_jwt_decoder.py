@@ -3,6 +3,7 @@ from framework.security.jwt_decoder import (
     print_jwt_trace,
     is_token_expired,
     has_role,
+    has_trusted_issuer,
 )
 
 
@@ -82,3 +83,43 @@ def test_provider_role_does_not_match_admin():
     }
 
     assert has_role(decoded_token, "admin") is False
+
+
+def test_trusted_issuer_matches():
+
+    decoded_token = {
+        "payload": {
+            "iss": "https://company-login.com"
+        }
+    }
+
+    assert has_trusted_issuer(
+        decoded_token,
+        "https://company-login.com"
+    ) is True
+
+
+def test_untrusted_issuer_fails():
+
+    decoded_token = {
+        "payload": {
+            "iss": "https://evil-site.com"
+        }
+    }
+
+    assert has_trusted_issuer(
+        decoded_token,
+        "https://company-login.com"
+    ) is False
+
+
+def test_missing_issuer_fails():
+
+    decoded_token = {
+        "payload": {}
+    }
+
+    assert has_trusted_issuer(
+        decoded_token,
+        "https://company-login.com"
+    ) is False

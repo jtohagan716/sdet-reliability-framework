@@ -34,7 +34,6 @@ def print_jwt_trace(decoded_token: dict) -> None:
 
     print("")
     print(f"Signature: {decoded_token['signature']}")
-
     print("================================")
     print("")
 
@@ -49,7 +48,17 @@ def is_token_expired(decoded_token: dict) -> bool:
 
     return current_timestamp > expiration
 
+
 def has_role(decoded_token: dict, required_role: str) -> bool:
     actual_role = decoded_token["payload"].get("role")
 
     return actual_role == required_role
+
+
+def has_trusted_issuer(
+    decoded_token: dict,
+    trusted_issuer: str
+) -> bool:
+    actual_issuer = decoded_token["payload"].get("iss")
+
+    return actual_issuer == trusted_issuer
