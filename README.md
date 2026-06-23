@@ -2,20 +2,21 @@
 
 ## Overview
 
-The SDET Reliability & Security Engineering Framework is a Python-based engineering project focused on reliability engineering, API testing, security validation, performance intelligence, and evidence-based release decisions.
+The SDET Reliability & Security Engineering Framework is a hands-on engineering project focused on reliability engineering, security validation, API testing, performance intelligence, observability, and evidence-based release decisions.
 
-The project serves as a practical engineering laboratory for developing modern Software Development Engineer in Test (SDET) skills through automated testing, observability, authorization validation, synthetic monitoring, performance analysis, and release intelligence.
+The project serves as a practical engineering laboratory for developing modern Software Development Engineer in Test (SDET), QA Automation, Reliability Engineering, and Performance Engineering skills through automated testing, security validation, synthetic monitoring, performance analysis, network inspection, failure simulation, and release intelligence.
 
 Rather than simply determining whether tests pass or fail, the framework aims to answer:
 
 * How is the system performing?
 * Is performance improving or degrading?
 * What is the reliability trend?
-* Is the release risk acceptable?
+* Is release risk acceptable?
 * Is system access properly secured?
+* How does the system behave during failures?
 * What does the available evidence suggest?
 
-The goal is to combine reliability engineering and security validation into a unified testing framework that produces actionable engineering insights.
+The goal is to combine reliability engineering, security validation, performance analysis, and automation into a unified framework that produces actionable engineering insights.
 
 ---
 
@@ -25,7 +26,7 @@ Measure
 
 ↓
 
-Analyze
+Observe
 
 ↓
 
@@ -33,7 +34,7 @@ Validate
 
 ↓
 
-Score
+Analyze
 
 ↓
 
@@ -49,7 +50,136 @@ The framework emphasizes evidence-based engineering decisions over assumptions.
 
 # Current Capabilities
 
+## UI Automation (Playwright)
+
+Implemented using Playwright and the Page Object Model (POM).
+
+Capabilities include:
+
+* Login automation
+* Authorization validation
+* User role behavior testing
+* Page Object Model (POM)
+* Centralized test data management
+* Browser workflow validation
+
+Examples:
+
+* Standard user login validation
+* Locked-out user validation
+* Role-based behavior testing
+* Inventory access validation
+
+---
+
+## API Testing
+
+Implemented using both Pytest and Playwright API testing.
+
+Capabilities include:
+
+* FastAPI endpoint testing
+* REST API validation
+* Endpoint health verification
+* JSON payload validation
+* Service availability monitoring
+* Synthetic service testing
+
+Examples:
+
+* Health endpoint validation
+* Protected API validation
+* API response verification
+
+---
+
+## Security & Authorization Testing
+
+Capabilities include:
+
+* JWT decoding
+* JWT inspection
+* Token expiration validation
+* Trusted issuer validation
+* Role-based access control (RBAC)
+* Authentication testing
+* Authorization testing
+* Protected API validation
+
+Security scenarios validated:
+
+* Missing credentials (401)
+* Invalid credentials (401)
+* Unauthorized roles (403)
+* Successful access (200)
+
+---
+
+## End-to-End Security Workflows
+
+Implemented using Playwright and FastAPI.
+
+Capabilities include:
+
+* JWT generation
+* Protected API access
+* Role validation
+* Issuer validation
+* Access decision verification
+
+Workflow Example:
+
+Client Request
+
+↓
+
+Authorization Header
+
+↓
+
+JWT Validation
+
+↓
+
+Expiration Check
+
+↓
+
+Issuer Validation
+
+↓
+
+Role Validation
+
+↓
+
+Access Decision
+
+↓
+
+Protected Resource Access
+
+---
+
+## Network Inspection
+
+Implemented using Playwright network monitoring.
+
+Capabilities include:
+
+* Request inspection
+* Response inspection
+* HTTP status validation
+* Browser transaction visibility
+* Network troubleshooting
+
+This allows validation of both user-facing functionality and underlying network behavior.
+
+---
+
 ## Reliability Engineering
+
+Capabilities include:
 
 * Reliability scoring
 * Historical reliability tracking
@@ -57,40 +187,47 @@ The framework emphasizes evidence-based engineering decisions over assumptions.
 * Release health evaluation
 * Risk-based release recommendations
 
+The framework emphasizes evidence-based reliability decisions rather than pass/fail testing alone.
+
+---
+
 ## Performance Engineering
+
+Capabilities include:
 
 * API latency measurement
 * Synthetic transaction monitoring
 * Historical performance tracking
 * Baseline comparison
 * Trend analysis
+* Login workflow timing
+* End-to-end workflow timing
 
-## Performance Intelligence
+Recent baseline examples include:
 
-* Average latency
-* Median (P50) latency
-* P95 latency
-* Historical trend analysis
-* Baseline variance reporting
+* FastAPI health endpoint timing
+* Login workflow duration
+* Complete workflow execution timing
 
-## API Testing
+The long-term objective is to detect performance regressions before they impact users.
 
-* REST API validation
-* Endpoint health verification
-* Response validation
-* Synthetic service testing
-* Automated regression coverage
+---
 
-## Security & Authorization Testing
+## Failure Simulation & Mocking
 
-* JWT decoding and inspection
-* Token expiration validation
-* Trusted issuer validation
-* Role-based access control (RBAC)
-* Authentication testing
-* Authorization testing
-* Protected API endpoint validation
-* Security response verification
+Implemented using Playwright route interception.
+
+Capabilities include:
+
+* Mocked backend failures
+* HTTP 500 simulation
+* Failure propagation validation
+* Error scenario testing
+* Reliability validation
+
+This allows testing of failure conditions without requiring actual backend outages.
+
+---
 
 ## Release Decision Engine
 
@@ -101,44 +238,13 @@ The framework classifies releases into evidence-based categories:
 * REQUIRES_REVIEW
 * BLOCK_RELEASE
 
-Release decisions are based on performance, reliability, and quality signals rather than pass/fail status alone.
-
----
-
-# Security Testing Capabilities
-
-The framework currently supports validation of modern API security concepts:
-
-## JWT Validation
-
-* Header inspection
-* Claim inspection
-* Signature inspection
-* Expiration validation
-* Trusted issuer validation
-
-## Authorization Validation
-
-* Role-based access control
-* Permission validation
-* Access decision verification
-
-## Protected Endpoint Testing
-
-Automated validation of:
-
-* Missing credentials (401)
-* Invalid credentials (401)
-* Unauthorized roles (403)
-* Successful access (200)
-
-These capabilities simulate real-world API security workflows commonly found in enterprise applications.
+Release decisions are based on reliability, performance, security, and quality signals rather than pass/fail status alone.
 
 ---
 
 # Reporting
 
-The framework provides:
+The framework currently provides:
 
 * Console reporting
 * Security reports
@@ -146,7 +252,7 @@ The framework provides:
 * Performance reports
 * Historical metrics
 * Dashboard generation
-* CI integration
+* CI integration support
 
 ---
 
@@ -178,11 +284,21 @@ tests/
 
 ├── baselines/
 
+├── ui/
+
 api_service/
 
 reports/
 
 ├── dashboard/
+
+playwright/
+
+├── pages/
+
+├── data/
+
+├── tests/
 
 ---
 
@@ -191,23 +307,27 @@ reports/
 ## Languages & Frameworks
 
 * Python
-* PyTest
+* TypeScript
+* Pytest
+* Playwright
 * FastAPI
 
 ## Testing & Quality
 
+* UI Automation
 * API Testing
 * Security Testing
 * Reliability Engineering
 * Performance Engineering
 * Synthetic Monitoring
-* Regression Testing
+* Network Inspection
+* Failure Simulation
 
 ## DevOps & Automation
 
 * Git
 * GitHub
-* GitHub Actions
+* GitHub Actions (planned)
 * CI/CD
 
 ## Security Concepts
@@ -217,47 +337,6 @@ reports/
 * Role-Based Access Control (RBAC)
 * Identity Validation
 * Protected API Testing
-
----
-
-# Example Security Workflow
-
-Client Request
-
-↓
-
-Authorization Header
-
-↓
-
-JWT Validation
-
-↓
-
-Expiration Check
-
-↓
-
-Issuer Validation
-
-↓
-
-Role Validation
-
-↓
-
-Access Decision
-
-↓
-
-HTTP Response
-
-Example responses:
-
-* 200 OK
-* 401 Unauthorized
-* 403 Forbidden
-* 500 Internal Server Error
 
 ---
 
@@ -271,17 +350,24 @@ python -m venv .venv
 
 ## Activate (Windows)
 
-```bash
+```powershell
 .venv\Scripts\activate
 ```
 
-## Install Dependencies
+## Install Python Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Run All Tests
+## Install Playwright
+
+```bash
+npm install
+npx playwright install
+```
+
+## Run All Pytest Tests
 
 ```bash
 pytest
@@ -293,11 +379,62 @@ pytest
 pytest tests/security -v
 ```
 
+## Run All Playwright Tests
+
+```bash
+npx playwright test
+```
+
+## Run a Specific Playwright Test
+
+```bash
+npx playwright test tests/ui/performance_baseline.spec.ts --project=chromium
+```
+
+## Run the FastAPI Service
+
+```bash
+uvicorn api_service.app:app --reload
+```
+
+Health Endpoint:
+
+```text
+http://127.0.0.1:8000/health
+```
+
+Protected Endpoint:
+
+```text
+http://127.0.0.1:8000/secure/patient-summary
+```
+
+## Open Playwright Report
+
+```bash
+npx playwright show-report
+```
+
+---
+
+# Recent Additions
+
+Recent enhancements include:
+
+* JWT inspection and validation
+* Role-based authorization testing
+* Protected API endpoint testing
+* Playwright Page Object Model
+* Playwright API testing
+* Network inspection
+* Route interception and mocking
+* End-to-end security workflows
+* Performance baseline capture
+* API + UI workflow validation
+
 ---
 
 # Future Roadmap
-
-Planned enhancements include:
 
 ## Security & Identity
 
@@ -310,10 +447,11 @@ Planned enhancements include:
 
 ## Automation
 
-* Authenticated Playwright workflows
-* End-to-end security testing
-* Synthetic user journeys
+* Advanced Playwright fixtures
 * API contract validation
+* Schema validation
+* CI/CD pipeline integration
+* Automated reporting
 
 ## Reliability & Observability
 
@@ -338,12 +476,13 @@ Planned enhancements include:
 This project serves as an ongoing engineering laboratory for exploring and demonstrating:
 
 * Software Test Automation
+* UI Automation
 * API Testing
 * Security Testing
 * Reliability Engineering
 * Performance Engineering
-* Release Intelligence
 * Observability
+* Failure Analysis
 * Evidence-Based Software Quality
 
 while continuously expanding modern SDET and Reliability Engineering capabilities.
@@ -354,14 +493,24 @@ while continuously expanding modern SDET and Reliability Engineering capabilitie
 
 Actively under development.
 
-Recent additions include:
+The framework currently combines:
 
-* JWT inspection and validation
-* Role-based authorization testing
-* Protected API endpoint testing
+* Playwright UI automation
+* Playwright API testing
+* FastAPI service validation
+* JWT security testing
+* Network inspection
+* Failure simulation
+* Performance baselines
 * Reliability scoring
-* Baseline management
-* Release decision engine
-* Performance intelligence enhancements
+* Release intelligence
 
-Future development will continue expanding security validation, observability, reliability analytics, and automated decision support.
+with additional capabilities planned as the project continues to evolve.
+
+---
+
+# Author
+
+James O'Hagan
+
+Software Quality Engineering • Reliability Engineering • Performance Engineering • Enterprise Application Support
