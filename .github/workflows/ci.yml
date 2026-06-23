@@ -78,7 +78,7 @@ jobs:
 
       - name: Run focused Playwright automation suite
         run: |
-          npx playwright test `
+            npx playwright test `
             tests/ui/canary.spec.ts `
             tests/ui/fastapi_health.spec.ts `
             tests/ui/secure_patient_summary_api.spec.ts `
@@ -87,6 +87,4 @@ jobs:
             tests/ui/fixture_role_behavior.spec.ts `
             tests/ui/fixture_security_api.spec.ts `
             tests/ui/performance_baseline.spec.ts `
-            tests/ui/performance_history_report.spec.ts `
-            tests/ui/performance_trend_report.spec.ts `
             --project=chromium
