@@ -76,8 +76,29 @@ jobs:
         shell: pwsh
         run: |
           docker compose up -d --build
-          Start-Sleep -Seconds 20
+          Start-Sleep -Seconds 5
           docker ps
+
+          $ready = $false
+
+          for ($i = 1; $i -le 30; $i++) {
+            try {
+              $response = Invoke-WebRequest -Uri http://127.0.0.1:8000/health -UseBasicParsing
+              if ($response.StatusCode -eq 200) {
+                $ready = $true
+                break
+              }
+            }
+            catch {
+              Write-Host "Waiting for FastAPI service... attempt $i"
+              Start-Sleep -Seconds 2
+            }
+          }
+
+          if (-not $ready) {
+            docker logs sdet-reliability-api
+            throw "FastAPI service did not become ready"
+          }
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
