@@ -1,4 +1,6 @@
 import random
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from fastapi.responses import Response
 import time
 from datetime import datetime, UTC
 
@@ -11,6 +13,18 @@ from framework.security.jwt_inspector import inspect_jwt
 TRUSTED_ISSUER = "https://company-login.com"
 REQUIRED_ROLE = "provider"
 
+REQUEST_COUNT = Counter(
+    "sdet_api_request_count",
+    "Total number of API requests received",
+    ["endpoint"],
+)
+
+REQUEST_LATENCY = Histogram(
+    "sdet_api_request_latency_seconds",
+    "API request latency in seconds",
+    ["endpoint"],
+)
+
 
 app = FastAPI(
     title="Synthetic Echo Service",
@@ -20,10 +34,21 @@ app = FastAPI(
 
 @app.get("/health")
 def health():
-    return {
-        "status": "UP",
-        "timestamp_utc": datetime.now(UTC).isoformat(),
-    }
+    endpoint = "/health"
+    REQUEST_COUNT.labels(endpoint=endpoint).inc()
+
+    with REQUEST_LATENCY.labels(endpoint=endpoint).time():
+        return {
+            "status": "UP",
+            "timestamp_utc": datetime.now(UTC).isoformat(),
+        }
+
+@app.get("/metrics")
+def metrics():
+    return Response(
+        content=generate_latest(),
+        media_type=CONTENT_TYPE_LATEST,
+    )
 
 
 @app.get("/echo")
