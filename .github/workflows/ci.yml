@@ -72,11 +72,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Start FastAPI service
+      - name: Start Docker Compose observability stack
         shell: pwsh
         run: |
-          Start-Process python -ArgumentList "-m uvicorn api_service.app:app --host 127.0.0.1 --port 8000"
-          Start-Sleep -Seconds 5
+          docker compose up -d --build
+          Start-Sleep -Seconds 20
+          docker ps
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -90,8 +91,9 @@ jobs:
         run: npx playwright install
 
       - name: Run focused Playwright automation suite
+        shell: pwsh
         run: |
-            npx playwright test `
+          npx playwright test `
             tests/ui/canary.spec.ts `
             tests/ui/fastapi_health.spec.ts `
             tests/ui/secure_patient_summary_api.spec.ts `
@@ -100,4 +102,11 @@ jobs:
             tests/ui/fixture_role_behavior.spec.ts `
             tests/ui/fixture_security_api.spec.ts `
             tests/ui/performance_baseline.spec.ts `
+            tests/ui/observability_validation.spec.ts `
+            tests/ui/prometheus_validation.spec.ts `
             --project=chromium
+
+      - name: Stop Docker Compose observability stack
+        if: always()
+        shell: pwsh
+        run: docker compose down
