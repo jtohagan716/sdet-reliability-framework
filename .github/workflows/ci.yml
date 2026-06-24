@@ -7,6 +7,19 @@ on:
     branches: [ main ]
 
 jobs:
+  docker-build-validation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t sdet-reliability-api .
+
+      - name: Validate Docker image
+        run: docker images sdet-reliability-api
+
   python-reliability-tests:
     runs-on: windows-latest
 
