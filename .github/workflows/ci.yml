@@ -53,7 +53,7 @@ jobs:
         run: python scripts/ci_performance_gate.py
 
   playwright-automation-tests:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     env:
       PYTHONPATH: ${{ github.workspace }}
@@ -62,43 +62,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
       - name: Start Docker Compose observability stack
-        shell: pwsh
         run: |
           docker compose up -d --build
-          Start-Sleep -Seconds 5
+          sleep 5
           docker ps
 
-          $ready = $false
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8000/health; then
+              echo "FastAPI service is ready"
+              exit 0
+            fi
 
-          for ($i = 1; $i -le 30; $i++) {
-            try {
-              $response = Invoke-WebRequest -Uri http://127.0.0.1:8000/health -UseBasicParsing
-              if ($response.StatusCode -eq 200) {
-                $ready = $true
-                break
-              }
-            }
-            catch {
-              Write-Host "Waiting for FastAPI service... attempt $i"
-              Start-Sleep -Seconds 2
-            }
-          }
+            echo "Waiting for FastAPI service... attempt $i"
+            sleep 2
+          done
 
-          if (-not $ready) {
-            docker logs sdet-reliability-api
-            throw "FastAPI service did not become ready"
-          }
+          docker logs sdet-reliability-api || true
+          exit 1
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -109,25 +90,23 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install
+        run: npx playwright install --with-deps
 
       - name: Run focused Playwright automation suite
-        shell: pwsh
         run: |
-          npx playwright test `
-            tests/ui/canary.spec.ts `
-            tests/ui/fastapi_health.spec.ts `
-            tests/ui/secure_patient_summary_api.spec.ts `
-            tests/ui/e2e_security_workflow.spec.ts `
-            tests/ui/fixture_inventory.spec.ts `
-            tests/ui/fixture_role_behavior.spec.ts `
-            tests/ui/fixture_security_api.spec.ts `
-            tests/ui/performance_baseline.spec.ts `
-            tests/ui/observability_validation.spec.ts `
-            tests/ui/prometheus_validation.spec.ts `
+          npx playwright test \
+            tests/ui/canary.spec.ts \
+            tests/ui/fastapi_health.spec.ts \
+            tests/ui/secure_patient_summary_api.spec.ts \
+            tests/ui/e2e_security_workflow.spec.ts \
+            tests/ui/fixture_inventory.spec.ts \
+            tests/ui/fixture_role_behavior.spec.ts \
+            tests/ui/fixture_security_api.spec.ts \
+            tests/ui/performance_baseline.spec.ts \
+            tests/ui/observability_validation.spec.ts \
+            tests/ui/prometheus_validation.spec.ts \
             --project=chromium
 
       - name: Stop Docker Compose observability stack
         if: always()
-        shell: pwsh
         run: docker compose down
