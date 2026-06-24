@@ -417,6 +417,32 @@ npx playwright show-report
 
 ---
 
+## Docker Support
+
+## Docker Support
+
+### Build Image
+
+docker build -t sdet-reliability-api .
+
+### Run Container
+
+docker run --rm -p 8000:8000 sdet-reliability-api
+
+### Run with Docker Compose
+
+docker compose up --build
+
+### Validate Health Endpoint
+
+http://localhost:8000/health
+
+### Build the Docker Image
+
+```bash
+docker build -t sdet-reliability-api .
+
+
 # Recent Additions
 
 Recent enhancements include:
