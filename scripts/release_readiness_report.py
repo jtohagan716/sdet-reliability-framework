@@ -1,17 +1,18 @@
 from datetime import UTC, datetime
 from pathlib import Path
-
+from scripts.read_playwright_results import get_playwright_status
 from scripts.collect_release_signals import collect_release_signals
 
 
 signals = [
     ("Docker Build", "PASS"),
     ("Python Tests", "PASS"),
-    ("Playwright Tests", "PASS"),
     ("Security Validation", "PASS"),
     ("Performance Gate", "PASS"),
     ("Observability Validation", "PASS"),
 ]
+
+signals.append(get_playwright_status())
 
 signals.extend(collect_release_signals())
 
@@ -26,7 +27,7 @@ lines.append(f"Generated UTC: {datetime.now(UTC).isoformat()}")
 lines.append("")
 
 for name, status in signals:
-    lines.append(f"{name:<28} {status}")
+    lines.append(f"{name:<35} {status}")
 
 lines.append("-" * 58)
 lines.append(f"Overall Status: {overall_status}")
