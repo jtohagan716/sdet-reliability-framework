@@ -13,56 +13,79 @@ def read_json_file(path: Path) -> dict[str, Any]:
     raise ValueError(f"Unable to read JSON results file: {path}")
 
 
-def count_failed_tests(suites: list[dict[str, Any]]) -> int:
-    failures = 0
+def collect_test_counts(suites: list[dict[str, Any]]) -> tuple[int, int, int]:
+    total = 0
+    failed = 0
 
     for suite in suites:
         for spec in suite.get("specs", []):
             for test in spec.get("tests", []):
-                for result in test.get("results", []):
-                    if result.get("status") != "passed":
-                        failures += 1
+                total += 1
 
-        failures += count_failed_tests(suite.get("suites", []))
+                results = test.get("results", [])
+                test_passed = any(result.get("status") == "passed" for result in results)
 
-    return failures
+                if not test_passed:
+                    failed += 1
+
+        child_total, child_failed, _ = collect_test_counts(suite.get("suites", []))
+        total += child_total
+        failed += child_failed
+
+    passed = total - failed
+    return total, failed, passed
 
 
-def count_total_tests(suites: list[dict[str, Any]]) -> int:
-    total = 0
+def get_playwright_summary(
+    results_file: str = "reports/playwright_observability_results.json",
+) -> dict[str, int | str]:
+    path = Path(results_file)
 
-    for suite in suites:
-        for spec in suite.get("specs", []):
-            total += len(spec.get("tests", []))
+    if not path.exists():
+        return {
+            "name": "Playwright Observability Tests",
+            "status": "FAIL",
+            "total": 0,
+            "passed": 0,
+            "failed": 0,
+        }
 
-        total += count_total_tests(suite.get("suites", []))
+    try:
+        data = read_json_file(path)
+    except ValueError:
+        return {
+            "name": "Playwright Observability Tests",
+            "status": "FAIL",
+            "total": 0,
+            "passed": 0,
+            "failed": 0,
+        }
 
-    return total
+    total, failed, passed = collect_test_counts(data.get("suites", []))
+    status = "PASS" if total > 0 and failed == 0 else "FAIL"
+
+    return {
+        "name": "Playwright Observability Tests",
+        "status": status,
+        "total": total,
+        "passed": passed,
+        "failed": failed,
+    }
 
 
 def get_playwright_status(
     results_file: str = "reports/playwright_observability_results.json",
 ) -> tuple[str, str]:
-    path = Path(results_file)
-
-    if not path.exists():
-        return "Playwright Observability Tests", "FAIL"
-
-    try:
-        data = read_json_file(path)
-    except ValueError:
-        return "Playwright Observability Tests", "FAIL"
-
-    suites = data.get("suites", [])
-    total_tests = count_total_tests(suites)
-    failed_tests = count_failed_tests(suites)
-
-    if total_tests > 0 and failed_tests == 0:
-        return "Playwright Observability Tests", "PASS"
-
-    return "Playwright Observability Tests", "FAIL"
+    summary = get_playwright_summary(results_file)
+    return str(summary["name"]), str(summary["status"])
 
 
 if __name__ == "__main__":
-    name, status = get_playwright_status()
-    print(f"{name:<35} {status}")
+    summary = get_playwright_summary()
+
+    print(f"{summary['name']}")
+    print("-" * 40)
+    print(f"Total Tests : {summary['total']}")
+    print(f"Passed      : {summary['passed']}")
+    print(f"Failed      : {summary['failed']}")
+    print(f"Status      : {summary['status']}")

@@ -32,3 +32,6 @@ node_modules/
 # Performance Baselines
 
 reports/baselines/*.json
+
+# Generated Playwright reports
+reports/playwright_observability_results.json

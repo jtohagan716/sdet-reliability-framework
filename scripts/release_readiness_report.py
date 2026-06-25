@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
 from pathlib import Path
-from scripts.read_playwright_results import get_playwright_status
+
 from scripts.collect_release_signals import collect_release_signals
+from scripts.read_playwright_results import get_playwright_status, get_playwright_summary
 
 
 signals = [
@@ -13,8 +14,9 @@ signals = [
 ]
 
 signals.append(get_playwright_status())
-
 signals.extend(collect_release_signals())
+
+playwright_summary = get_playwright_summary()
 
 blocking_failures = [name for name, status in signals if status != "PASS"]
 overall_status = "READY FOR RELEASE" if not blocking_failures else "BLOCK RELEASE"
@@ -28,6 +30,13 @@ lines.append("")
 
 for name, status in signals:
     lines.append(f"{name:<35} {status}")
+
+lines.append("")
+lines.append("Playwright Evidence")
+lines.append("-" * 58)
+lines.append(f"Total Tests: {playwright_summary['total']}")
+lines.append(f"Passed     : {playwright_summary['passed']}")
+lines.append(f"Failed     : {playwright_summary['failed']}")
 
 lines.append("-" * 58)
 lines.append(f"Overall Status: {overall_status}")
