@@ -4,6 +4,7 @@ from pathlib import Path
 from scripts.collect_release_signals import collect_release_signals
 from scripts.quality_signal import QualitySignal
 from scripts.read_playwright_results import get_playwright_quality_signal
+from scripts.release_assessment import ReleaseAssessment
 
 
 signals: list[QualitySignal] = [
@@ -18,8 +19,7 @@ signals.append(get_playwright_quality_signal())
 
 signals.extend(collect_release_signals())
 
-blocking_failures = [signal.name for signal in signals if signal.status != "PASS"]
-overall_status = "READY FOR RELEASE" if not blocking_failures else "BLOCK RELEASE"
+assessment = ReleaseAssessment(signals=signals)
 
 lines = []
 lines.append("=" * 58)
@@ -45,7 +45,10 @@ for signal in signals:
         lines.append("")
 
 lines.append("-" * 58)
-lines.append(f"Overall Status: {overall_status}")
+lines.append(f"Total Checks  : {assessment.total_checks}")
+lines.append(f"Failed Checks : {assessment.failed_checks}")
+lines.append(f"Risk Level    : {assessment.risk_level}")
+lines.append(f"Overall Status: {assessment.overall_status}")
 lines.append("=" * 58)
 
 report_text = "\n".join(lines)
