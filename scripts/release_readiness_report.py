@@ -2,23 +2,23 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from scripts.collect_release_signals import collect_release_signals
-from scripts.read_playwright_results import get_playwright_status, get_playwright_summary
+from scripts.quality_signal import QualitySignal
+from scripts.read_playwright_results import get_playwright_quality_signal
 
 
-signals = [
-    ("Docker Build", "PASS"),
-    ("Python Tests", "PASS"),
-    ("Security Validation", "PASS"),
-    ("Performance Gate", "PASS"),
-    ("Observability Validation", "PASS"),
+signals: list[QualitySignal] = [
+    QualitySignal("Docker Build", "PASS", "Infrastructure"),
+    QualitySignal("Python Tests", "PASS", "Automation"),
+    QualitySignal("Security Validation", "PASS", "Security"),
+    QualitySignal("Performance Gate", "PASS", "Performance"),
+    QualitySignal("Observability Validation", "PASS", "Observability"),
 ]
 
-signals.append(get_playwright_status())
+signals.append(get_playwright_quality_signal())
+
 signals.extend(collect_release_signals())
 
-playwright_summary = get_playwright_summary()
-
-blocking_failures = [name for name, status in signals if status != "PASS"]
+blocking_failures = [signal.name for signal in signals if signal.status != "PASS"]
 overall_status = "READY FOR RELEASE" if not blocking_failures else "BLOCK RELEASE"
 
 lines = []
@@ -28,15 +28,21 @@ lines.append("=" * 58)
 lines.append(f"Generated UTC: {datetime.now(UTC).isoformat()}")
 lines.append("")
 
-for name, status in signals:
-    lines.append(f"{name:<35} {status}")
+for signal in signals:
+    lines.append(f"{signal.name:<35} {signal.status}")
 
 lines.append("")
-lines.append("Playwright Evidence")
+lines.append("Detailed Evidence")
 lines.append("-" * 58)
-lines.append(f"Total Tests: {playwright_summary['total']}")
-lines.append(f"Passed     : {playwright_summary['passed']}")
-lines.append(f"Failed     : {playwright_summary['failed']}")
+
+for signal in signals:
+    if signal.total is not None:
+        lines.append(f"{signal.name}")
+        lines.append(f"Category   : {signal.category}")
+        lines.append(f"Total      : {signal.total}")
+        lines.append(f"Passed     : {signal.passed}")
+        lines.append(f"Failed     : {signal.failed}")
+        lines.append("")
 
 lines.append("-" * 58)
 lines.append(f"Overall Status: {overall_status}")

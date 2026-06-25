@@ -1,14 +1,26 @@
 import time
+
 import requests
 
+from scripts.quality_signal import QualitySignal
 
-def check_url(name: str, url: str, retries: int = 3, delay_seconds: int = 2) -> tuple[str, str]:
+
+def check_url(
+    name: str,
+    url: str,
+    retries: int = 3,
+    delay_seconds: int = 2,
+) -> QualitySignal:
     for attempt in range(1, retries + 1):
         try:
             response = requests.get(url, timeout=5)
 
             if response.status_code == 200:
-                return name, "PASS"
+                return QualitySignal(
+                    name=name,
+                    status="PASS",
+                    category="Runtime Health",
+                )
 
             print(f"{name} attempt {attempt}: HTTP {response.status_code}")
 
@@ -17,10 +29,14 @@ def check_url(name: str, url: str, retries: int = 3, delay_seconds: int = 2) -> 
 
         time.sleep(delay_seconds)
 
-    return name, "FAIL"
+    return QualitySignal(
+        name=name,
+        status="FAIL",
+        category="Runtime Health",
+    )
 
 
-def collect_release_signals() -> list[tuple[str, str]]:
+def collect_release_signals() -> list[QualitySignal]:
     return [
         check_url("API Health", "http://127.0.0.1:8000/health"),
         check_url("Metrics Endpoint", "http://127.0.0.1:8000/metrics"),
@@ -31,5 +47,5 @@ def collect_release_signals() -> list[tuple[str, str]]:
 if __name__ == "__main__":
     signals = collect_release_signals()
 
-    for name, status in signals:
-        print(f"{name:<28} {status}")
+    for signal in signals:
+        print(signal)

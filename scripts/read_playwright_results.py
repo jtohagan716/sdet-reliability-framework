@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from typing import Any
+from scripts.quality_signal import QualitySignal
 
 
 def read_json_file(path: Path) -> dict[str, Any]:
@@ -79,6 +80,19 @@ def get_playwright_status(
     summary = get_playwright_summary(results_file)
     return str(summary["name"]), str(summary["status"])
 
+def get_playwright_quality_signal(
+    results_file: str = "reports/playwright_observability_results.json",
+) -> QualitySignal:
+    summary = get_playwright_summary(results_file)
+
+    return QualitySignal(
+        name=str(summary["name"]),
+        status=str(summary["status"]),
+        category="Automation",
+        total=int(summary["total"]),
+        passed=int(summary["passed"]),
+        failed=int(summary["failed"]),
+    )
 
 if __name__ == "__main__":
     summary = get_playwright_summary()
