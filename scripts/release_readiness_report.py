@@ -49,6 +49,7 @@ lines.append(f"Total Checks  : {assessment.total_checks}")
 lines.append(f"Failed Checks : {assessment.failed_checks}")
 lines.append(f"Risk Level    : {assessment.risk_level}")
 lines.append(f"Overall Status: {assessment.overall_status}")
+lines.append(f"Recommendation: {assessment.recommendation}")
 lines.append("=" * 58)
 
 report_text = "\n".join(lines)

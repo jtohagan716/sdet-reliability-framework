@@ -12,11 +12,15 @@ class ReleaseAssessment:
         return len(self.signals)
 
     @property
-    def failed_checks(self) -> int:
-        return sum(
-            1 for signal in self.signals
+    def failed_signals(self) -> list[QualitySignal]:
+        return [
+            signal for signal in self.signals
             if signal.status != "PASS"
-        )
+        ]
+
+    @property
+    def failed_checks(self) -> int:
+        return len(self.failed_signals)
 
     @property
     def overall_status(self) -> str:
@@ -38,3 +42,11 @@ class ReleaseAssessment:
             return "HIGH"
 
         return "CRITICAL"
+
+    @property
+    def recommendation(self) -> str:
+        if self.failed_checks == 0:
+            return "Proceed with release."
+
+        failed_names = ", ".join(signal.name for signal in self.failed_signals)
+        return f"Block release until failing checks are resolved: {failed_names}."
