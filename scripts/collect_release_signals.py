@@ -5,12 +5,29 @@ import requests
 from scripts.quality_signal import QualitySignal
 
 
+# Toggle individual checks here for controlled failure testing.
+FAIL_INJECTION = {
+    "API Health": False,
+    "Metrics Endpoint": False,
+    "Prometheus API": False,
+}
+
+
 def check_url(
     name: str,
     url: str,
     retries: int = 3,
     delay_seconds: int = 2,
 ) -> QualitySignal:
+
+    # Controlled failure injection for testing the release engine.
+    if FAIL_INJECTION.get(name, False):
+        return QualitySignal(
+            name=name,
+            status="FAIL",
+            category="Runtime Health",
+        )
+
     for attempt in range(1, retries + 1):
         try:
             response = requests.get(url, timeout=5)
@@ -45,7 +62,5 @@ def collect_release_signals() -> list[QualitySignal]:
 
 
 if __name__ == "__main__":
-    signals = collect_release_signals()
-
-    for signal in signals:
+    for signal in collect_release_signals():
         print(signal)
