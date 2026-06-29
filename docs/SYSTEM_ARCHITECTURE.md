@@ -22,33 +22,33 @@ The framework combines automated testing, runtime health checks, observability v
 
 GitHub Actions
 
-&#x20;     |
+     |
 
-&#x20;     v
+     v
 
 Docker / Docker Compose
 
-&#x20;     |
+     |
 
-&#x20;     v
+     v
 
 FastAPI Application
 
-&#x20;     |
+     |
 
-&#x20;     +--> Health Endpoint
+     +--> Health Endpoint
 
-&#x20;     +--> Metrics Endpoint
+     +--> Metrics Endpoint
 
-&#x20;     |
+     |
 
-&#x20;     v
+     v
 
 Prometheus
 
-&#x20;     |
+     |
 
-&#x20;     v
+     v
 
 Grafana
 
@@ -56,15 +56,15 @@ Grafana
 
 Playwright Tests
 
-&#x20;     |
+     |
 
-&#x20;     v
+     v
 
 Playwright JSON Results
 
-&#x20;     |
+     |
 
-&#x20;     v
+     v
 
 QualitySignal
 
@@ -72,9 +72,9 @@ QualitySignal
 
 Runtime Health Checks
 
-&#x20;     |
+     |
 
-&#x20;     v
+     v
 
 QualitySignal
 
@@ -82,15 +82,15 @@ QualitySignal
 
 QualitySignal Objects
 
-&#x20;     |
+     |
 
-&#x20;     v
+     v
 
 ReleaseAssessment
 
-&#x20;     |
+     |
 
-&#x20;     v
+     v
 
 Release Readiness Report
 
