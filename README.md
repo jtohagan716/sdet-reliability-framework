@@ -146,14 +146,14 @@ Test results are exported as structured evidence and used to support release ass
 
 ### Pytest
 
-Executes Python-based validation across API, regression, security, workflow, payload, FHIR, and performance-related test areas.
+Executes Python-based validation across API, regression, security, workflow, payload, and performance-related test areas.
 
 Current Python test coverage includes:
 
 * API contract validation
 * Failure signature checks
 * Synthetic API journeys
-* FHIR validation workflows
+* Validation workflows
 * Payload correlation
 * Performance checks
 * Canary health and trend analysis
@@ -310,7 +310,7 @@ Recommendation: Proceed with release.
 ├── tests/
 │   ├── api/              API validation tests
 │   ├── baselines/        Baseline and reporting tests
-│   ├── fhir/             FHIR validation and workflow tests
+│   ├── validation/       Validation and workflow tests
 │   ├── payloads/         Payload correlation and translation tests
 │   ├── performance/      Performance-related tests
 │   ├── regression/       Reliability and regression tests
