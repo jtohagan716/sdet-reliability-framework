@@ -256,6 +256,23 @@ Overall result:   PASS
 
 ---
 
+## Portfolio Evidence
+
+This repository includes supporting evidence that demonstrates the framework running as a real local reliability and quality engineering stack.
+
+* [`docs/LOCAL_VALIDATION_EVIDENCE.md`](docs/LOCAL_VALIDATION_EVIDENCE.md)
+  Documents local validation results, including Docker stack health, API health, metrics validation, Prometheus health, Python test results, and Playwright test results.
+
+* [`docs/VISUAL_EVIDENCE.md`](docs/VISUAL_EVIDENCE.md)
+  Provides screenshots showing the Docker runtime stack, GitHub commit activity, repository structure, Grafana dashboard, and Prometheus target health.
+
+* [`reports/release_readiness_report.txt`](reports/release_readiness_report.txt)
+  Shows an example release readiness report with pass/fail evidence, risk level, release status, and recommendation.
+
+* [`docs/adr/`](docs/adr/)
+  Contains Architecture Decision Records explaining key engineering decisions behind the framework design.
+
+
 ## Example Release Report
 
 ```text
