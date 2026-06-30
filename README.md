@@ -1,7 +1,8 @@
 # SDET Reliability Framework
 
-> A modern Quality Engineering platform demonstrating automated testing, observability, release assessment, and evidence-driven deployment decisions.
+[![SDET Reliability Framework CI](https://github.com/jtohagan716/sdet-reliability-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/jtohagan716/sdet-reliability-framework/actions/workflows/ci.yml)
 
+> A modern Quality Engineering platform demonstrating automated testing, observability, release assessment, and evidence-driven deployment decisions.
 ---
 
 ## Overview
