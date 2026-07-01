@@ -22,12 +22,13 @@ This framework demonstrates how to:
 - Run Python/Pytest-based reliability and regression checks.
 - Run Playwright automation for API, workflow, observability, and performance validation.
 - Validate REST API behavior using Postman and Newman.
+- Validate synthetic domain API behavior using Pytest and Postman/Newman.
 - Expose runtime metrics for Prometheus.
 - Visualize service health through Grafana.
 - Use Docker Compose to run a repeatable local reliability stack.
 - Use GitHub Actions for CI-based validation.
 - Produce release-readiness evidence for technical review.
-- Document architecture, engineering decisions, validation evidence, and visual proof.
+- Document architecture, engineering decisions, validation evidence, API testing strategy, and visual proof.
 
 ---
 
@@ -66,6 +67,7 @@ FastAPI Backend Service
   - /health
   - /metrics
   - /openapi.json
+  - /patients/{patient_id}
      |
      v
 Observability Layer
@@ -81,7 +83,7 @@ Release-Readiness Evidence
   - Release recommendation
 ```
 
-The backend service exposes health, metrics, and OpenAPI endpoints. Automated validation checks those endpoints and produces evidence that can support release decisions.
+The backend service exposes health, metrics, OpenAPI, and synthetic domain API endpoints. Automated validation checks those endpoints and produces evidence that can support release decisions.
 
 ---
 
@@ -93,10 +95,10 @@ The project demonstrates several layers of validation:
    - Confirms the service is reachable and reports healthy status.
 
 2. **REST API validation**
-   - Confirms expected HTTP status codes, response fields, OpenAPI availability, metrics availability, and controlled error behavior.
+   - Confirms expected HTTP status codes, response fields, OpenAPI availability, metrics availability, controlled error behavior, path-parameter validation, unsupported-method handling, and synthetic domain API behavior.
 
 3. **Automated Python validation**
-   - Runs Pytest checks for API, security, workflow, payload, FHIR, regression, and reliability scenarios.
+   - Runs Pytest checks for API, security, workflow, payload, FHIR, regression, synthetic REST API, and reliability scenarios.
 
 4. **Playwright automation**
    - Runs API health checks, synthetic behavior checks, mocked backend failure scenarios, network inspection, and performance trend validation.
@@ -108,7 +110,7 @@ The project demonstrates several layers of validation:
    - Summarizes validation results, failed checks, risk level, release status, and recommendation.
 
 7. **CI validation**
-   - GitHub Actions validates the stack, runs automated tests, and provides visible build status.
+   - GitHub Actions validates the stack, runs automated tests, uploads Newman API evidence, and provides visible build status.
 
 ---
 
@@ -116,7 +118,7 @@ The project demonstrates several layers of validation:
 
 ### FastAPI Backend
 
-The backend service provides API endpoints used for health, metrics, OpenAPI contract visibility, and reliability validation.
+The backend service provides API endpoints used for health, metrics, OpenAPI contract visibility, synthetic domain behavior, and reliability validation.
 
 Key endpoints include:
 
@@ -124,17 +126,30 @@ Key endpoints include:
 GET /health
 GET /metrics
 GET /openapi.json
+GET /patients/{patient_id}
 ```
+
+The synthetic patient endpoint uses fictional test data only and supports deeper REST API validation, including:
+
+- valid resource retrieval
+- missing-resource `404` behavior
+- invalid path-parameter `422` validation
+- unsupported-method `405` handling
+- OpenAPI contract visibility
+- response-field validation
+- sensitive-data exclusion checks
 
 ---
 
 ### Python / Pytest Validation
 
-The Python test suite validates backend behavior, reliability logic, payload handling, security-oriented workflows, regression scenarios, and release-readiness conditions.
+The Python test suite validates backend behavior, reliability logic, payload handling, security-oriented workflows, regression scenarios, synthetic REST API behavior, and release-readiness conditions.
 
 Example validation areas include:
 
 - API behavior
+- synthetic patient API validation
+- positive and negative REST API scenarios
 - payload validation
 - security workflow checks
 - backend failure behavior
@@ -174,12 +189,22 @@ The collection covers:
 - response-field validation
 - response-time checks
 - negative API testing
+- synthetic patient API validation
+- path-parameter validation
+- unsupported-method handling
+- sensitive-data exclusion checks
 - command-line execution with Newman
 - JUnit-style XML report generation
 
 Postman API testing evidence is documented in:
 
 [`docs/POSTMAN_API_TESTING.md`](docs/POSTMAN_API_TESTING.md)
+
+Additional REST API testing artifacts include:
+
+- [`docs/REST_API_TESTING_STRATEGY.md`](docs/REST_API_TESTING_STRATEGY.md)
+- [`docs/API_TEST_CASE_MATRIX.md`](docs/API_TEST_CASE_MATRIX.md)
+- [`docs/REST_API_DEPTH_IMPLEMENTATION_NOTES.md`](docs/REST_API_DEPTH_IMPLEMENTATION_NOTES.md)
 
 The Postman collection and environment are located in:
 
@@ -193,6 +218,43 @@ The Newman report output is generated at:
 ```text
 reports/postman-newman-results.xml
 ```
+
+---
+
+### REST API Testing Depth
+
+The project now includes a synthetic domain API endpoint:
+
+```text
+GET /patients/{patient_id}
+```
+
+This endpoint demonstrates more realistic backend API testing beyond basic health checks.
+
+Validated scenarios include:
+
+| Scenario | Expected Result |
+|---|---|
+| `GET /patients/1001` | `200 OK` with expected synthetic active patient |
+| `GET /patients/1002` | `200 OK` with expected synthetic inactive patient |
+| `GET /patients/9999` | `404 Not Found` for unknown synthetic patient |
+| `GET /patients/abc` | `422 Validation Error` for invalid path parameter |
+| `POST /patients/1001` | `405 Method Not Allowed` for unsupported method |
+| `GET /openapi.json` | Confirms `/patients/{patient_id}` is documented |
+
+This coverage demonstrates:
+
+- positive REST API testing
+- negative REST API testing
+- path-parameter validation
+- response-body validation
+- OpenAPI contract awareness
+- method-boundary validation
+- response-time threshold checks
+- sensitive-data exclusion
+- Pytest API automation
+- Postman/Newman API automation
+- CI-ready API evidence
 
 ---
 
@@ -257,6 +319,11 @@ This project includes supporting evidence for technical review:
 | Local validation evidence | [`docs/LOCAL_VALIDATION_EVIDENCE.md`](docs/LOCAL_VALIDATION_EVIDENCE.md) |
 | Visual evidence | [`docs/VISUAL_EVIDENCE.md`](docs/VISUAL_EVIDENCE.md) |
 | Postman API testing evidence | [`docs/POSTMAN_API_TESTING.md`](docs/POSTMAN_API_TESTING.md) |
+| REST API testing strategy | [`docs/REST_API_TESTING_STRATEGY.md`](docs/REST_API_TESTING_STRATEGY.md) |
+| API test case matrix | [`docs/API_TEST_CASE_MATRIX.md`](docs/API_TEST_CASE_MATRIX.md) |
+| REST API depth implementation notes | [`docs/REST_API_DEPTH_IMPLEMENTATION_NOTES.md`](docs/REST_API_DEPTH_IMPLEMENTATION_NOTES.md) |
+| CI pipeline overview | [`docs/CI_PIPELINE_OVERVIEW.md`](docs/CI_PIPELINE_OVERVIEW.md) |
+| Security policy | [`SECURITY.md`](SECURITY.md) |
 | System architecture | [`docs/SYSTEM_ARCHITECTURE.md`](docs/SYSTEM_ARCHITECTURE.md) |
 | Engineering decisions | [`docs/ENGINEERING_DECISIONS.md`](docs/ENGINEERING_DECISIONS.md) |
 | Architecture Decision Records | [`docs/adr/`](docs/adr/) |
@@ -272,9 +339,11 @@ The project has been validated locally with:
 ```text
 Docker stack running successfully
 FastAPI health endpoint responding
+Synthetic patient REST API endpoint responding
 Prometheus metrics endpoint available
 Prometheus server healthy
 Python/Pytest test suite passing
+Synthetic REST API Pytest coverage passing
 Playwright automation suite passing
 Postman/Newman API validation passing
 Newman XML report generated
@@ -284,6 +353,7 @@ Documented evidence:
 
 - [`docs/LOCAL_VALIDATION_EVIDENCE.md`](docs/LOCAL_VALIDATION_EVIDENCE.md)
 - [CI Pipeline Overview](docs/CI_PIPELINE_OVERVIEW.md)
+- [REST API Depth Implementation Notes](docs/REST_API_DEPTH_IMPLEMENTATION_NOTES.md)
 
 ---
 
@@ -330,13 +400,19 @@ docker ps
 Invoke-RestMethod http://localhost:8000/health
 ```
 
-### 5. Validate metrics
+### 5. Validate the synthetic patient API endpoint
+
+```powershell
+Invoke-RestMethod http://localhost:8000/patients/1001
+```
+
+### 6. Validate metrics
 
 ```powershell
 Invoke-WebRequest http://localhost:8000/metrics
 ```
 
-### 6. Access observability tools
+### 7. Access observability tools
 
 ```text
 FastAPI API:  http://localhost:8000
@@ -352,6 +428,12 @@ Grafana:      http://localhost:3000
 
 ```powershell
 python -m pytest -q
+```
+
+Run the focused synthetic REST API test coverage:
+
+```powershell
+python -m pytest tests\test_synthetic_patient_api.py -q
 ```
 
 ### Playwright
@@ -377,9 +459,9 @@ npm run postman:test:report
 Expected successful result:
 
 ```text
-requests: 4 executed, 0 failed
-test-scripts: 4 executed, 0 failed
-assertions: 11 executed, 0 failed
+requests: 10 executed, 0 failed
+test-scripts: 10 executed, 0 failed
+assertions: 37 executed, 0 failed
 ```
 
 ---
@@ -407,8 +489,14 @@ This demonstrates repeatable backend API validation, CI-based quality gates, and
 | `GET /metrics` | Confirms Prometheus-compatible metrics are exposed |
 | `GET /openapi.json` | Confirms the FastAPI OpenAPI contract is available |
 | `GET /invalid-endpoint` | Confirms invalid routes return controlled `404` responses |
+| `GET /patients/1001` | Confirms a valid synthetic patient returns `200 OK` with expected response fields |
+| `GET /patients/1002` | Confirms a second valid synthetic patient returns distinct expected data |
+| `GET /patients/9999` | Confirms an unknown synthetic patient returns controlled `404` behavior |
+| `GET /patients/abc` | Confirms invalid path-parameter input returns `422` validation behavior |
+| `POST /patients/1001` | Confirms unsupported methods return `405 Method Not Allowed` |
+| `GET /openapi.json` | Confirms `/patients/{patient_id}` is documented in the OpenAPI contract |
 
-This demonstrates practical REST API and backend service validation using Postman, Newman, environments, assertions, and report output.
+This demonstrates practical REST API and backend service validation using Postman, Newman, environments, assertions, response-time checks, negative testing, contract validation, and report output.
 
 ---
 
@@ -418,9 +506,13 @@ The repository includes GitHub Actions validation for:
 
 - Docker build validation
 - Python reliability tests
+- synthetic REST API Pytest validation
 - performance gate execution
+- Postman/Newman REST API validation
+- Newman XML artifact upload
 - Playwright automation tests
 - API health validation
+- OpenAPI contract validation
 - observability-related checks
 
 The CI badge at the top of this README provides quick visibility into the current validation status.
@@ -432,17 +524,23 @@ The CI badge at the top of this README provides quick visibility into the curren
 ```text
 sdet-reliability-framework/
 ├── .github/
-│   └── workflows/
-│       └── ci.yml
+│   ├── ISSUE_TEMPLATE/
+│   ├── workflows/
+│   │   └── ci.yml
+│   └── pull_request_template.md
 ├── api_service/
 │   └── app.py
 ├── config/
 ├── docs/
 │   ├── adr/
 │   ├── images/
+│   ├── API_TEST_CASE_MATRIX.md
+│   ├── CI_PIPELINE_OVERVIEW.md
 │   ├── ENGINEERING_DECISIONS.md
 │   ├── LOCAL_VALIDATION_EVIDENCE.md
 │   ├── POSTMAN_API_TESTING.md
+│   ├── REST_API_DEPTH_IMPLEMENTATION_NOTES.md
+│   ├── REST_API_TESTING_STRATEGY.md
 │   ├── SYSTEM_ARCHITECTURE.md
 │   └── VISUAL_EVIDENCE.md
 ├── postman/
@@ -458,6 +556,7 @@ sdet-reliability-framework/
 ├── package-lock.json
 ├── playwright.config.ts
 ├── README.md
+├── SECURITY.md
 └── requirements.txt
 ```
 
@@ -486,17 +585,27 @@ Current project status:
 ```text
 Docker stack: validated
 FastAPI health endpoint: validated
+Synthetic patient REST API endpoint: validated
 Prometheus metrics endpoint: validated
 Grafana dashboard evidence: documented
 Python/Pytest suite: validated
+Synthetic REST API Pytest coverage: validated
 Playwright suite: validated
 Postman/Newman API suite: validated
+Postman/Newman coverage: 10 requests / 37 assertions
 Newman XML report: generated
-GitHub Actions CI: configured
+GitHub Actions CI: configured and passing
+Newman CI artifact upload: configured
 Release-readiness report: available
+REST API strategy documentation: available
+API test case matrix: available
+REST API implementation notes: available
 Architecture documentation: available
 Visual evidence: available
 ADR documentation: available
+Security policy: available
+Pull request checklist: available
+Issue templates: available
 ```
 
 ---
@@ -508,6 +617,7 @@ This project demonstrates practical skills relevant to roles such as:
 - QA Automation Engineer
 - Quality Engineer
 - SDET
+- Backend API Test Engineer
 - Test Automation Engineer
 - Application Support Engineer
 - Production Support Engineer
@@ -521,6 +631,9 @@ It demonstrates experience with:
 - automated testing
 - REST API testing
 - backend service validation
+- synthetic domain API testing
+- positive and negative API testing
+- OpenAPI contract awareness
 - Postman and Newman
 - Python/Pytest
 - Playwright
@@ -559,10 +672,10 @@ The framework demonstrates how those same reliability and validation concepts ca
 
 Potential future improvements include:
 
-- CI integration for Postman/Newman execution
-- additional REST API negative tests
 - authentication and authorization API testing
+- role-based API validation
 - expanded OpenAPI contract validation
+- additional REST API negative tests for request bodies and headers
 - dependency/security scanning
 - expanded Grafana dashboard examples
 - automated release report artifact upload
