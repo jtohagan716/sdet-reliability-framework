@@ -463,6 +463,12 @@ requests: 10 executed, 0 failed
 test-scripts: 10 executed, 0 failed
 assertions: 37 executed, 0 failed
 ```
+### Local Smoke Validation
+
+Run a focused local validation pass against the Docker-based API stack:
+
+```powershell
+.\scripts\local_smoke_validation.ps1
 
 ---
 
