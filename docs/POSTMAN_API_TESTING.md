@@ -8,6 +8,14 @@ This project includes a Postman API testing layer to demonstrate REST API and ba
 The Postman collection validates backend health, observability endpoints, OpenAPI contract availability, expected response fields, HTTP status codes, response-time thresholds, and controlled negative API behavior.
 
 This adds a recognizable API testing toolset alongside the existing Python, Playwright, Docker, Prometheus, Grafana, GitHub Actions, and release-readiness validation work.
+## Related API Testing Documents
+
+This document explains the Postman/Newman implementation.
+
+Additional API testing artifacts:
+
+- [REST API Testing Strategy](REST_API_TESTING_STRATEGY.md) — explains the broader API testing approach, including positive testing, negative testing, contract awareness, response validation, CI execution, and release-readiness value.
+- [API Test Case Matrix](API_TEST_CASE_MATRIX.md) — maps specific API endpoints and scenarios to expected status codes, validation points, automation layers, and release impact.
 
 ## Files
 
