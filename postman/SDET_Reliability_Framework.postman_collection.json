@@ -1,0 +1,134 @@
+{
+  "info": {
+    "name": "SDET Reliability Framework API Tests",
+    "description": "Postman collection for REST API and backend service validation in the SDET Reliability Framework.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check - API is UP",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/health",
+        "description": "Validates that the FastAPI backend health endpoint is reachable and returns expected service status."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response time is within local threshold\", function () {",
+              "    const maxMs = Number(pm.environment.get(\"max_response_ms\") || 1000);",
+              "    pm.expect(pm.response.responseTime).to.be.below(maxMs);",
+              "});",
+              "",
+              "pm.test(\"Health response includes status\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property(\"status\");",
+              "    pm.expect(String(json.status).toUpperCase()).to.eql(\"UP\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Metrics Endpoint - Prometheus Metrics Available",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/metrics",
+        "description": "Validates that the backend exposes Prometheus-compatible metrics for observability."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Metrics response is not empty\", function () {",
+              "    pm.expect(pm.response.text().length).to.be.greaterThan(100);",
+              "});",
+              "",
+              "pm.test(\"Metrics response includes Prometheus-style help output\", function () {",
+              "    const body = pm.response.text();",
+              "    pm.expect(body).to.include(\"# HELP\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "OpenAPI Contract - Schema Available",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/openapi.json",
+        "description": "Validates that the FastAPI backend exposes an OpenAPI schema for API contract visibility."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"OpenAPI schema includes required top-level fields\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property(\"openapi\");",
+              "    pm.expect(json).to.have.property(\"info\");",
+              "    pm.expect(json).to.have.property(\"paths\");",
+              "});",
+              "",
+              "pm.test(\"OpenAPI schema documents the health endpoint\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.paths).to.have.property(\"/health\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Negative Test - Invalid Endpoint Returns 404",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/invalid-endpoint",
+        "description": "Validates controlled API behavior for an invalid route."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Invalid endpoint returns 404\", function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test(\"Error response is controlled\", function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property(\"detail\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
