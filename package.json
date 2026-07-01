@@ -6,7 +6,11 @@
   "directories": {
     "test": "tests"
   },
-  "scripts": {},
+  "scripts": {
+    "postman:test": "newman run postman/SDET_Reliability_Framework.postman_collection.json -e postman/SDET_Reliability_Local.postman_environment.json",
+    "postman:test:report": "newman run postman/SDET_Reliability_Framework.postman_collection.json -e postman/SDET_Reliability_Local.postman_environment.json --reporters cli,junit --reporter-junit-export reports/postman-newman-results.xml",
+    "playwright:test": "playwright test"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jtohagan716/sdet-reliability-framework.git"
@@ -21,6 +25,7 @@
   "homepage": "https://github.com/jtohagan716/sdet-reliability-framework#readme",
   "devDependencies": {
     "@playwright/test": "^1.60.0",
-    "@types/node": "^25.9.3"
+    "@types/node": "^25.9.3",
+    "newman": "^6.2.2"
   }
 }

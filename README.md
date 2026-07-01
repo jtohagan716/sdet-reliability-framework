@@ -2,588 +2,540 @@
 
 [![SDET Reliability Framework CI](https://github.com/jtohagan716/sdet-reliability-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/jtohagan716/sdet-reliability-framework/actions/workflows/ci.yml)
 
-> A modern Quality Engineering platform demonstrating automated testing, observability, release assessment, and evidence-driven deployment decisions.
----
-
 ## Overview
 
-The **SDET Reliability Framework** is a portfolio project that demonstrates how modern Quality Engineering extends beyond automated testing.
+The **SDET Reliability Framework** is a Quality Engineering and reliability-focused portfolio project that demonstrates automated testing, API validation, observability, performance signal tracking, and release-readiness evidence.
 
-The framework combines UI automation, API validation, runtime health checks, observability, CI/CD concepts, performance trend analysis, and release assessment into a single quality pipeline that determines whether an application is ready for production deployment.
+The project combines modern QA automation practices with production-systems thinking. It is designed to show how automated tests, health checks, metrics, dashboards, API validation, CI execution, and release reporting can work together to support better software release decisions.
 
-Rather than treating testing as an isolated pass/fail activity, the framework collects quality evidence from multiple sources and produces release recommendations based on that evidence.
+This project reflects a practical engineering mindset:
 
-The project is designed to show practical skills in:
-
-* Automated testing
-* Reliability engineering
-* Runtime health validation
-* Observability
-* Performance signal analysis
-* Security workflow validation
-* Evidence-based release decisions
+> Quality is not only whether tests pass. Quality also includes whether the system is healthy, observable, reliable, testable, and ready to release.
 
 ---
 
-## Objectives
+## Project Objectives
 
-* Demonstrate modern Quality Engineering practices
-* Integrate automated testing into a repeatable validation workflow
-* Validate runtime health and observability signals
-* Standardize quality evidence across multiple test sources
-* Support evidence-driven release assessment
-* Generate release readiness reports
-* Show deterministic, reproducible validation behavior
+This framework demonstrates how to:
+
+- Build automated validation around backend service health.
+- Run Python/Pytest-based reliability and regression checks.
+- Run Playwright automation for API, workflow, observability, and performance validation.
+- Validate REST API behavior using Postman and Newman.
+- Expose runtime metrics for Prometheus.
+- Visualize service health through Grafana.
+- Use Docker Compose to run a repeatable local reliability stack.
+- Use GitHub Actions for CI-based validation.
+- Produce release-readiness evidence for technical review.
+- Document architecture, engineering decisions, validation evidence, and visual proof.
 
 ---
 
 ## Technology Stack
 
-| Area             | Technology              |
-| ---------------- | ----------------------- |
-| Language         | Python                  |
-| API              | FastAPI                 |
-| UI Automation    | Playwright              |
-| API Testing      | Pytest / Playwright     |
-| Containerization | Docker / Docker Compose |
-| CI/CD            | GitHub Actions          |
-| Monitoring       | Prometheus              |
-| Dashboards       | Grafana                 |
-| Version Control  | Git / GitHub            |
+| Area | Tools / Technologies |
+|---|---|
+| Backend Service | FastAPI, Python |
+| Python Testing | Pytest |
+| Browser / API Automation | Playwright |
+| API Testing | Postman, Newman |
+| Containerization | Docker, Docker Compose |
+| Observability | Prometheus, Grafana |
+| CI/CD Validation | GitHub Actions |
+| Reporting | Release-readiness report, Newman JUnit-style XML report |
+| Documentation | Markdown, Architecture Decision Records, Wiki |
+| Version Control | Git, GitHub |
 
 ---
 
-## High-Level Architecture
+## Architecture Summary
+
+The framework uses a small but realistic reliability stack:
 
 ```text
-                    GitHub Actions
-                           │
-                           ▼
-                  Build & Execute Tests
-                           │
-         ┌─────────────────┴─────────────────┐
-         │                                   │
-         ▼                                   ▼
- Playwright Tests                  Runtime Health Checks
-         │                                   │
-         └───────────────┬───────────────────┘
-                         ▼
-                  QualitySignal Model
-                         ▼
-                 ReleaseAssessment
-                         ▼
-             Release Readiness Report
+Developer / CI
+     |
+     v
+Automated Tests
+  - Pytest
+  - Playwright
+  - Postman/Newman
+     |
+     v
+FastAPI Backend Service
+  - /health
+  - /metrics
+  - /openapi.json
+     |
+     v
+Observability Layer
+  - Prometheus
+  - Grafana
+     |
+     v
+Release-Readiness Evidence
+  - Test results
+  - Metrics evidence
+  - API validation evidence
+  - Visual evidence
+  - Release recommendation
 ```
+
+The backend service exposes health, metrics, and OpenAPI endpoints. Automated validation checks those endpoints and produces evidence that can support release decisions.
 
 ---
 
-## Quality Pipeline
+## Quality and Reliability Pipeline
 
-```text
-Application
-    ↓
-Automated Testing
-    ↓
-Runtime Validation
-    ↓
-Observability Validation
-    ↓
-QualitySignal
-    ↓
-ReleaseAssessment
-    ↓
-Release Recommendation
-```
+The project demonstrates several layers of validation:
 
-The framework is intended to answer questions such as:
+1. **Backend health validation**
+   - Confirms the service is reachable and reports healthy status.
 
-* Is the application running?
-* Are the health endpoints responding correctly?
-* Are metrics being exported?
-* Are automated tests passing?
-* Are security workflows behaving correctly?
-* Are performance signals stable, improving, or degrading?
-* Is the release ready, risky, or blocked?
+2. **REST API validation**
+   - Confirms expected HTTP status codes, response fields, OpenAPI availability, metrics availability, and controlled error behavior.
+
+3. **Automated Python validation**
+   - Runs Pytest checks for API, security, workflow, payload, FHIR, regression, and reliability scenarios.
+
+4. **Playwright automation**
+   - Runs API health checks, synthetic behavior checks, mocked backend failure scenarios, network inspection, and performance trend validation.
+
+5. **Observability validation**
+   - Confirms Prometheus metrics are exposed and Grafana can visualize runtime behavior.
+
+6. **Release-readiness reporting**
+   - Summarizes validation results, failed checks, risk level, release status, and recommendation.
+
+7. **CI validation**
+   - GitHub Actions validates the stack, runs automated tests, and provides visible build status.
 
 ---
 
 ## Core Components
 
-### FastAPI
+### FastAPI Backend
 
-Provides the application under test.
+The backend service provides API endpoints used for health, metrics, OpenAPI contract visibility, and reliability validation.
 
-Current endpoints include:
+Key endpoints include:
 
-* `/health`
-* `/metrics`
-
-The `/health` endpoint reports application availability.
-
-The `/metrics` endpoint exports Prometheus-compatible runtime and application metrics.
-
----
-
-### Playwright
-
-Executes browser-based and API-driven validation.
-
-Current Playwright coverage includes:
-
-* API health canary checks
-* FastAPI health validation
-* Synthetic canary validation
-* Mocked backend failure simulation
-* End-to-end security workflow validation
-* Network inspection
-* Performance baseline capture
-* Performance history reporting
-* Performance trend reporting
-
-Test results are exported as structured evidence and used to support release assessment.
+```text
+GET /health
+GET /metrics
+GET /openapi.json
+```
 
 ---
 
-### Pytest
+### Python / Pytest Validation
 
-Executes Python-based validation across API, regression, security, workflow, payload, and performance-related test areas.
+The Python test suite validates backend behavior, reliability logic, payload handling, security-oriented workflows, regression scenarios, and release-readiness conditions.
 
-Current Python test coverage includes:
+Example validation areas include:
 
-* API contract validation
-* Failure signature checks
-* Synthetic API journeys
-* Validation workflows
-* Payload correlation
-* Performance checks
-* Canary health and trend analysis
-* Security context validation
-* JWT validation
-* Operational decision logic
-* Workflow validation
+- API behavior
+- payload validation
+- security workflow checks
+- backend failure behavior
+- FHIR-oriented test data
+- performance and operational decision logic
+- release-readiness support
 
 ---
 
-### Docker
+### Playwright Automation
 
-Provides consistent local execution across framework components.
+Playwright is used for modern automation coverage beyond traditional UI-only testing.
+
+The suite includes validation for:
+
+- API health canaries
+- FastAPI health checks
+- mocked backend failure behavior
+- security workflows
+- network inspection
+- observability validation
+- Prometheus validation
+- performance trend reporting
+
+---
+
+### Postman REST API Testing
+
+The framework includes a Postman collection for REST API and backend service validation.
+
+The collection covers:
+
+- backend health checks
+- Prometheus metrics availability
+- OpenAPI contract validation
+- HTTP status-code assertions
+- response-field validation
+- response-time checks
+- negative API testing
+- command-line execution with Newman
+- JUnit-style XML report generation
+
+Postman API testing evidence is documented in:
+
+[`docs/POSTMAN_API_TESTING.md`](docs/POSTMAN_API_TESTING.md)
+
+The Postman collection and environment are located in:
+
+```text
+postman/SDET_Reliability_Framework.postman_collection.json
+postman/SDET_Reliability_Local.postman_environment.json
+```
+
+The Newman report output is generated at:
+
+```text
+reports/postman-newman-results.xml
+```
+
+---
+
+### Docker Compose Reliability Stack
 
 The local stack includes:
 
-* FastAPI application container
-* Prometheus container
-* Grafana container
+```text
+FastAPI service
+Prometheus
+Grafana
+```
 
-Docker support allows the framework to run in a reproducible environment instead of depending only on local machine configuration.
-
----
-
-### Prometheus
-
-Collects application and runtime metrics.
-
-Prometheus is used to validate that the application is exporting observable signals that can support operational and release-readiness decisions.
+This allows the application, metrics, and dashboard components to run together in a repeatable local environment.
 
 ---
 
-### Grafana
+### Prometheus Metrics
 
-Visualizes operational metrics and system health.
-
-Grafana supports dashboard-driven review of runtime behavior and observability signals.
-
----
-
-### QualitySignal
-
-A standardized quality evidence model.
-
-Each evidence provider returns a `QualitySignal`, allowing the release engine to evaluate multiple technologies using a common interface.
-
-Current evidence providers include:
-
-* Runtime Health
-* Playwright Observability
-
-Additional providers are planned.
-
----
-
-### ReleaseAssessment
-
-Evaluates collected quality signals and produces a release decision.
-
-The release assessment calculates:
-
-* Total checks
-* Failed checks
-* Risk level
-* Overall status
-* Release recommendation
-
-Release recommendations are based on evidence rather than assumptions.
-
----
-
-## Validation Evidence
-
-Recent local validation confirmed that the framework runs successfully and produces quality evidence across the local reliability stack.
-
-Validation evidence includes:
-
-* Docker stack running successfully
-* FastAPI container reporting healthy status
-* `/health` endpoint returning `UP`
-* `/metrics` endpoint exporting Prometheus metrics
-* Prometheus server reporting healthy status
-* Grafana container running
-* Python test suite passing
-* Playwright test suite passing
-
-Evidence documents:
-
-* [`docs/LOCAL_VALIDATION_EVIDENCE.md`](docs/LOCAL_VALIDATION_EVIDENCE.md)
-* [`reports/release_readiness_report.txt`](reports/release_readiness_report.txt)
-
-Recent validation results:
+The API exposes Prometheus-compatible metrics through:
 
 ```text
-Python tests:     180 passed
-Playwright tests: 87 passed
-API health:       UP
-Prometheus:       Healthy
-Overall result:   PASS
+GET /metrics
 ```
+
+This supports service observability and gives the test framework measurable runtime signals.
+
+---
+
+### Grafana Dashboard
+
+Grafana is used to visualize service behavior and demonstrate operational monitoring concepts.
+
+The visual evidence documentation includes screenshots showing the Grafana dashboard and Prometheus target health.
+
+---
+
+### Release-Readiness Report
+
+The framework includes a release-readiness report that summarizes validation evidence and supports release decisions.
+
+The report helps answer:
+
+- Did the validation checks pass?
+- Were any failures detected?
+- What is the risk level?
+- Is the release recommended?
+- What evidence supports that recommendation?
+
+Release report:
+
+[`reports/release_readiness_report.txt`](reports/release_readiness_report.txt)
 
 ---
 
 ## Portfolio Evidence
 
-This repository includes supporting evidence that demonstrates the framework running as a real local reliability and quality engineering stack.
+This project includes supporting evidence for technical review:
 
-* [`docs/LOCAL_VALIDATION_EVIDENCE.md`](docs/LOCAL_VALIDATION_EVIDENCE.md)
-  Documents local validation results, including Docker stack health, API health, metrics validation, Prometheus health, Python test results, and Playwright test results.
+| Evidence | Link |
+|---|---|
+| Local validation evidence | [`docs/LOCAL_VALIDATION_EVIDENCE.md`](docs/LOCAL_VALIDATION_EVIDENCE.md) |
+| Visual evidence | [`docs/VISUAL_EVIDENCE.md`](docs/VISUAL_EVIDENCE.md) |
+| Postman API testing evidence | [`docs/POSTMAN_API_TESTING.md`](docs/POSTMAN_API_TESTING.md) |
+| System architecture | [`docs/SYSTEM_ARCHITECTURE.md`](docs/SYSTEM_ARCHITECTURE.md) |
+| Engineering decisions | [`docs/ENGINEERING_DECISIONS.md`](docs/ENGINEERING_DECISIONS.md) |
+| Architecture Decision Records | [`docs/adr/`](docs/adr/) |
+| Release-readiness report | [`reports/release_readiness_report.txt`](reports/release_readiness_report.txt) |
+| GitHub Actions CI | [GitHub Actions](https://github.com/jtohagan716/sdet-reliability-framework/actions) |
 
-* [`docs/VISUAL_EVIDENCE.md`](docs/VISUAL_EVIDENCE.md)
-  Provides screenshots showing the Docker runtime stack, GitHub commit activity, repository structure, Grafana dashboard, and Prometheus target health.
+---
 
-* [`reports/release_readiness_report.txt`](reports/release_readiness_report.txt)
-  Shows an example release readiness report with pass/fail evidence, risk level, release status, and recommendation.
+## Local Validation Evidence
 
-* [`docs/adr/`](docs/adr/)
-  Contains Architecture Decision Records explaining key engineering decisions behind the framework design.
-
-
-## Example Release Report
+The project has been validated locally with:
 
 ```text
-==========================================================
-SDET RELIABILITY FRAMEWORK - RELEASE READINESS REPORT
-==========================================================
-
-Docker Build                        PASS
-Python Tests                        PASS
-Playwright Observability Tests      PASS
-API Health                          PASS
-Metrics Endpoint                    PASS
-Prometheus API                      PASS
-
-----------------------------------------------------------
-
-Total Checks  : 9
-Failed Checks : 0
-Risk Level    : LOW
-Overall Status: READY FOR RELEASE
-Recommendation: Proceed with release.
+Docker stack running successfully
+FastAPI health endpoint responding
+Prometheus metrics endpoint available
+Prometheus server healthy
+Python/Pytest test suite passing
+Playwright automation suite passing
+Postman/Newman API validation passing
+Newman XML report generated
 ```
 
----
+Documented evidence:
 
-## Repository Structure
-
-```text
-.
-├── api_service/          FastAPI application
-├── docs/                 Architecture and engineering documentation
-├── reports/              Generated reports and evidence
-├── scripts/              Release assessment and automation utilities
-├── tests/
-│   ├── api/              API validation tests
-│   ├── baselines/        Baseline and reporting tests
-│   ├── validation/       Validation and workflow tests
-│   ├── payloads/         Payload correlation and translation tests
-│   ├── performance/      Performance-related tests
-│   ├── regression/       Reliability and regression tests
-│   ├── security/         Security and JWT validation tests
-│   ├── ui/               Playwright tests
-│   └── workflows/        Workflow validation tests
-├── docker-compose.yml
-├── prometheus.yml
-└── README.md
-```
+[`docs/LOCAL_VALIDATION_EVIDENCE.md`](docs/LOCAL_VALIDATION_EVIDENCE.md)
 
 ---
 
-## Engineering Documentation
+## Visual Evidence
 
-Major architectural decisions are documented separately.
+Visual evidence includes screenshots for:
 
-See:
+- Docker stack running
+- GitHub repository structure
+- GitHub commit history
+- Grafana dashboard
+- Prometheus target health
 
-* [`docs/SYSTEM_ARCHITECTURE.md`](docs/SYSTEM_ARCHITECTURE.md)
-* [`docs/ENGINEERING_DECISIONS.md`](docs/ENGINEERING_DECISIONS.md)
-* [`docs/LOCAL_VALIDATION_EVIDENCE.md`](docs/LOCAL_VALIDATION_EVIDENCE.md)
+Documented evidence:
 
-These documents explain:
-
-* Architectural rationale
-* Design tradeoffs
-* Framework evolution
-* Local validation evidence
-* Future direction
+[`docs/VISUAL_EVIDENCE.md`](docs/VISUAL_EVIDENCE.md)
 
 ---
 
-## Running the Framework Locally
+## Running the Project Locally
 
-### 1. Clone the Repository
+### 1. Clone the repository
 
-```bash
-git clone <repository-url>
+```powershell
+git clone https://github.com/jtohagan716/sdet-reliability-framework.git
 cd sdet-reliability-framework
 ```
 
----
-
-### 2. Create a Python Virtual Environment
-
-```bash
-python -m venv .venv
-```
-
-Activate on Windows:
+### 2. Start the Docker stack
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
+docker compose up -d
 ```
 
-If PowerShell blocks activation, use the virtual environment Python directly:
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
-
----
-
-### 3. Install Python Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-Or, using Python module syntax:
-
-```powershell
-python -m pip install -r requirements.txt
-```
-
----
-
-### 4. Install Playwright Dependencies
-
-```bash
-npm install
-npx playwright install
-```
-
----
-
-### 5. Start the Docker Stack
-
-```bash
-docker compose up --build
-```
-
-Or run in detached mode:
-
-```bash
-docker compose up --build -d
-```
-
----
-
-### 6. Confirm Containers Are Running
+### 3. Confirm containers are running
 
 ```powershell
 docker ps
 ```
 
-Expected services include:
-
-* `sdet-reliability-api`
-* `sdet-prometheus`
-* `sdet-grafana`
-
----
-
-### 7. Validate API Health
+### 4. Validate the API health endpoint
 
 ```powershell
 Invoke-RestMethod http://localhost:8000/health
 ```
 
-Expected result:
-
-```text
-status: UP
-```
-
----
-
-### 8. Validate Metrics Export
+### 5. Validate metrics
 
 ```powershell
-Invoke-RestMethod http://localhost:8000/metrics
+Invoke-WebRequest http://localhost:8000/metrics
 ```
 
-Expected result:
+### 6. Access observability tools
 
 ```text
-Prometheus-compatible metrics output
-```
-
----
-
-### 9. Validate Prometheus
-
-```powershell
-Invoke-RestMethod http://localhost:9090/-/healthy
-```
-
-Expected result:
-
-```text
-Prometheus Server is Healthy.
-```
-
-Prometheus targets can be reviewed at:
-
-```text
-http://localhost:9090/targets
-```
-
----
-
-### 10. Open Grafana
-
-```text
-http://localhost:3000
-```
-
-Default local credentials may be:
-
-```text
-admin / admin
+FastAPI API:  http://localhost:8000
+Prometheus:   http://localhost:9090
+Grafana:      http://localhost:3000
 ```
 
 ---
 
 ## Running Tests
 
-### Run Python Tests
+### Python / Pytest
 
 ```powershell
 python -m pytest -q
 ```
 
-Expected result:
-
-```text
-All Python tests pass
-```
-
----
-
-### Run Playwright Tests
+### Playwright
 
 ```powershell
 npx playwright test
 ```
 
-Expected result:
+### Postman / Newman API Tests
+
+Run the Postman collection from the command line:
+
+```powershell
+npm run postman:test
+```
+
+Run the Postman collection and generate a JUnit-style XML report:
+
+```powershell
+npm run postman:test:report
+```
+
+Expected successful result:
 
 ```text
-All Playwright tests pass
+requests: 4 executed, 0 failed
+test-scripts: 4 executed, 0 failed
+assertions: 11 executed, 0 failed
 ```
 
 ---
 
-### Open the Playwright HTML Report
+## Postman API Test Coverage
 
-```powershell
-npx playwright show-report
+| Request | Validation |
+|---|---|
+| `GET /health` | Confirms the backend service is reachable and reports `UP` status |
+| `GET /metrics` | Confirms Prometheus-compatible metrics are exposed |
+| `GET /openapi.json` | Confirms the FastAPI OpenAPI contract is available |
+| `GET /invalid-endpoint` | Confirms invalid routes return controlled `404` responses |
+
+This demonstrates practical REST API and backend service validation using Postman, Newman, environments, assertions, and report output.
+
+---
+
+## GitHub Actions CI
+
+The repository includes GitHub Actions validation for:
+
+- Docker build validation
+- Python reliability tests
+- performance gate execution
+- Playwright automation tests
+- API health validation
+- observability-related checks
+
+The CI badge at the top of this README provides quick visibility into the current validation status.
+
+---
+
+## Project Structure
+
+```text
+sdet-reliability-framework/
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── api_service/
+│   └── app.py
+├── config/
+├── docs/
+│   ├── adr/
+│   ├── images/
+│   ├── ENGINEERING_DECISIONS.md
+│   ├── LOCAL_VALIDATION_EVIDENCE.md
+│   ├── POSTMAN_API_TESTING.md
+│   ├── SYSTEM_ARCHITECTURE.md
+│   └── VISUAL_EVIDENCE.md
+├── postman/
+│   ├── SDET_Reliability_Framework.postman_collection.json
+│   └── SDET_Reliability_Local.postman_environment.json
+├── reports/
+│   ├── postman-newman-results.xml
+│   └── release_readiness_report.txt
+├── scripts/
+├── tests/
+├── docker-compose.yml
+├── package.json
+├── package-lock.json
+├── playwright.config.ts
+├── README.md
+└── requirements.txt
 ```
 
 ---
 
-## Local Validation Workflow
+## Engineering Decisions
 
-A typical local validation workflow is:
+The project includes Architecture Decision Records to explain key design decisions.
 
-```powershell
-docker ps
-Invoke-RestMethod http://localhost:8000/health
-Invoke-RestMethod http://localhost:8000/metrics
-Invoke-RestMethod http://localhost:9090/-/healthy
-python -m pytest -q
-npx playwright test
-```
+Examples include:
 
-This validates:
+- Using Docker Compose for the local reliability stack
+- Using a quality signal model
+- Separating release assessment from test execution
 
-* Container health
-* API availability
-* Metrics export
-* Prometheus health
-* Python automated tests
-* Playwright automated tests
+Architecture Decision Records:
+
+[`docs/adr/`](docs/adr/)
 
 ---
 
 ## Current Status
 
-The framework currently demonstrates:
+Current project status:
 
-* Running FastAPI service
-* Dockerized local reliability stack
-* Prometheus metrics export
-* Grafana dashboard support
-* Python automated test coverage
-* Playwright automated test coverage
-* Security workflow validation
-* Synthetic canary checks
-* Mocked failure simulation
-* Network inspection
-* Performance baseline and trend reporting
-* Release readiness reporting
-* Local validation evidence documentation
+```text
+Docker stack: validated
+FastAPI health endpoint: validated
+Prometheus metrics endpoint: validated
+Grafana dashboard evidence: documented
+Python/Pytest suite: validated
+Playwright suite: validated
+Postman/Newman API suite: validated
+Newman XML report: generated
+GitHub Actions CI: configured
+Release-readiness report: available
+Architecture documentation: available
+Visual evidence: available
+ADR documentation: available
+```
 
 ---
 
-## Career Relevance
+## Professional Relevance
 
-This project demonstrates practical Quality Engineering and reliability-focused testing skills relevant to roles such as:
+This project demonstrates practical skills relevant to roles such as:
 
-* QA Engineer
-* SDET
-* QA Automation Engineer
-* Application Support Engineer
-* Reliability Engineer
-* Performance Test Engineer
-* Healthcare IT Quality Analyst
-* Production Support Engineer
+- QA Automation Engineer
+- Quality Engineer
+- SDET
+- Test Automation Engineer
+- Application Support Engineer
+- Production Support Engineer
+- Performance Test Engineer
+- Reliability-focused QA Engineer
+- Healthcare IT Quality Analyst
+- Cross-Functional Test Engineer
 
-The project emphasizes deterministic validation, reproducible test evidence, observability, and release decision support.
+It demonstrates experience with:
+
+- automated testing
+- REST API testing
+- backend service validation
+- Postman and Newman
+- Python/Pytest
+- Playwright
+- Docker
+- CI validation
+- Prometheus metrics
+- Grafana observability
+- release-readiness reporting
+- defect and risk evidence
+- system health validation
+- repeatable test execution
+
+---
+
+## Career Context
+
+This project was built to connect production systems experience with modern Quality Engineering practices.
+
+It reflects a background in:
+
+- production troubleshooting
+- performance testing
+- system validation
+- backend service behavior
+- log and evidence collection
+- defect triage
+- release support
+- operational risk assessment
+- healthcare IT reliability
+
+The framework demonstrates how those same reliability and validation concepts can be applied using modern QA automation and observability tools.
 
 ---
 
@@ -591,27 +543,34 @@ The project emphasizes deterministic validation, reproducible test evidence, obs
 
 Potential future improvements include:
 
-* Additional QualitySignal providers
-* Expanded Grafana dashboard examples
-* CI/CD release gate enforcement
-* Automated release report generation in GitHub Actions
-* Additional synthetic journey coverage
-* Broader API contract validation
-* More advanced performance regression thresholds
-* Additional observability metrics
-* Screenshot-based evidence capture
-* Improved dashboard documentation
+- CI integration for Postman/Newman execution
+- additional REST API negative tests
+- authentication and authorization API testing
+- expanded OpenAPI contract validation
+- dependency/security scanning
+- expanded Grafana dashboard examples
+- automated release report artifact upload
+- additional NIST-aligned security validation documentation
+- cross-functional change validation testing
+- cloud/on-prem change validation simulation
 
 ---
 
 ## Summary
 
-The **SDET Reliability Framework** demonstrates how automated testing, observability, health validation, performance signals, and release assessment can work together as a practical Quality Engineering system.
+The SDET Reliability Framework demonstrates how modern QA automation, backend API validation, observability, and release-readiness evidence can work together.
 
-The goal is not only to test whether features work, but to produce evidence that supports reliable release decisions.
-
-Overall focus:
+It is designed to show more than test execution. It shows a disciplined validation workflow:
 
 ```text
-Test → Observe → Validate → Assess Risk → Recommend
+Run the system
+Validate the API
+Run automated tests
+Check metrics
+Observe behavior
+Generate evidence
+Assess release readiness
+Document decisions
 ```
+
+This project represents a practical bridge between production systems experience and modern Quality Engineering, SDET, reliability validation, and application support practices.

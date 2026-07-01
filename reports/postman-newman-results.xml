@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="SDET Reliability Framework API Tests" tests="4" time="0.240">
+  <testsuite name="Health Check - API is UP" id="cddb8af8-1eb1-4d60-886f-440184a160bd" timestamp="2026-07-01T01:19:32.200Z" tests="3" failures="0" errors="0" time="0.213">
+    <testcase name="Status code is 200" time="0.213" classname="HealthCheckApiIsUp"/>
+    <testcase name="Response time is within local threshold" time="0.213" classname="HealthCheckApiIsUp"/>
+    <testcase name="Health response includes status" time="0.213" classname="HealthCheckApiIsUp"/>
+  </testsuite>
+  <testsuite name="Metrics Endpoint - Prometheus Metrics Available" id="ac9e8f30-b054-4099-ab56-2bed925513cc" timestamp="2026-07-01T01:19:32.200Z" tests="3" failures="0" errors="0" time="0.016">
+    <testcase name="Status code is 200" time="0.016" classname="MetricsEndpointPrometheusMetricsAvailable"/>
+    <testcase name="Metrics response is not empty" time="0.016" classname="MetricsEndpointPrometheusMetricsAvailable"/>
+    <testcase name="Metrics response includes Prometheus-style help output" time="0.016" classname="MetricsEndpointPrometheusMetricsAvailable"/>
+  </testsuite>
+  <testsuite name="OpenAPI Contract - Schema Available" id="2a991de4-1da9-4871-9782-1b1c498305a0" timestamp="2026-07-01T01:19:32.200Z" tests="3" failures="0" errors="0" time="0.006">
+    <testcase name="Status code is 200" time="0.006" classname="OpenApiContractSchemaAvailable"/>
+    <testcase name="OpenAPI schema includes required top-level fields" time="0.006" classname="OpenApiContractSchemaAvailable"/>
+    <testcase name="OpenAPI schema documents the health endpoint" time="0.006" classname="OpenApiContractSchemaAvailable"/>
+  </testsuite>
+  <testsuite name="Negative Test - Invalid Endpoint Returns 404" id="437b134a-7c85-48cc-9729-fa26ad5c0845" timestamp="2026-07-01T01:19:32.200Z" tests="2" failures="0" errors="0" time="0.005">
+    <testcase name="Invalid endpoint returns 404" time="0.005" classname="NegativeTestInvalidEndpointReturns404"/>
+    <testcase name="Error response is controlled" time="0.005" classname="NegativeTestInvalidEndpointReturns404"/>
+  </testsuite>
+</testsuites>
