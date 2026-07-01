@@ -354,7 +354,7 @@ Documented evidence:
 - [`docs/LOCAL_VALIDATION_EVIDENCE.md`](docs/LOCAL_VALIDATION_EVIDENCE.md)
 - [CI Pipeline Overview](docs/CI_PIPELINE_OVERVIEW.md)
 - [REST API Depth Implementation Notes](docs/REST_API_DEPTH_IMPLEMENTATION_NOTES.md)
-
+- [API Failure Triage Guide](docs/API_FAILURE_TRIAGE_GUIDE.md)
 ---
 
 ## Visual Evidence
