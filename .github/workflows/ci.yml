@@ -89,6 +89,19 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
+      - name: Run Postman REST API validation with Newman
+        run: |
+          mkdir -p reports
+          npm run postman:test:report
+
+      - name: Upload Newman API test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postman-newman-results
+          path: reports/postman-newman-results.xml
+          if-no-files-found: warn
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
