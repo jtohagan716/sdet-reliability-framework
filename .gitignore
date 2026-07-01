@@ -35,3 +35,8 @@ reports/baselines/*.json
 
 # Generated Playwright reports
 reports/playwright_observability_results.json
+
+# Private career/job-search notes
+docs/RESUME_BULLET_BANK.md
+private/
+career-notes/
