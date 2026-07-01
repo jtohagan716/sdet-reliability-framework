@@ -383,6 +383,21 @@ assertions: 11 executed, 0 failed
 
 ---
 
+### CI-Integrated Postman/Newman API Validation
+
+The framework runs Postman/Newman REST API validation in GitHub Actions as part of the automated CI workflow.
+
+The CI pipeline:
+
+- starts the Docker Compose reliability stack
+- waits for the FastAPI service health check to pass
+- runs the Postman collection with Newman
+- generates a JUnit-style XML report
+- uploads the Newman report as a GitHub Actions artifact
+- continues into the Playwright automation suite
+
+This demonstrates repeatable backend API validation, CI-based quality gates, and downloadable test evidence.
+
 ## Postman API Test Coverage
 
 | Request | Validation |
