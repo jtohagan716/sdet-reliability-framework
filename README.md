@@ -130,17 +130,21 @@ GET /openapi.json
 
 ### Python / Pytest Validation
 
-The Python test suite validates backend behavior, reliability logic, payload handling, security-oriented workflows, regression scenarios, and release-readiness conditions.
+Executes Python-based validation across API, regression, security, workflow, payload, and performance-related test areas.
 
 Example validation areas include:
 
-- API behavior
-- payload validation
-- security workflow checks
-- backend failure behavior
-- FHIR-oriented test data
-- performance and operational decision logic
-- release-readiness support
+* API contract validation
+* Failure signature checks
+* Synthetic API journeys
+* Validation workflows
+* Payload correlation
+* Performance checks
+* Canary health and trend analysis
+* Security context validation
+* JWT validation
+* Operational decision logic
+* Workflow validation
 
 ---
 
@@ -282,7 +286,26 @@ Newman XML report generated
 
 Documented evidence:
 
-[`docs/LOCAL_VALIDATION_EVIDENCE.md`](docs/LOCAL_VALIDATION_EVIDENCE.md)
+```text
+.
+├── api_service/          FastAPI application
+├── docs/                 Architecture and engineering documentation
+├── reports/              Generated reports and evidence
+├── scripts/              Release assessment and automation utilities
+├── tests/
+│   ├── api/              API validation tests
+│   ├── baselines/        Baseline and reporting tests
+│   ├── validation/       Validation and workflow tests
+│   ├── payloads/         Payload correlation and translation tests
+│   ├── performance/      Performance-related tests
+│   ├── regression/       Reliability and regression tests
+│   ├── security/         Security and JWT validation tests
+│   ├── ui/               Playwright tests
+│   └── workflows/        Workflow validation tests
+├── docker-compose.yml
+├── prometheus.yml
+└── README.md
+```
 
 ---
 
