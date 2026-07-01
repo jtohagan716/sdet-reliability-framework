@@ -282,7 +282,8 @@ Newman XML report generated
 
 Documented evidence:
 
-[`docs/LOCAL_VALIDATION_EVIDENCE.md`](docs/LOCAL_VALIDATION_EVIDENCE.md)
+- [`docs/LOCAL_VALIDATION_EVIDENCE.md`](docs/LOCAL_VALIDATION_EVIDENCE.md)
+- [CI Pipeline Overview](docs/CI_PIPELINE_OVERVIEW.md)
 
 ---
 
