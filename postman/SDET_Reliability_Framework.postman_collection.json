@@ -129,6 +129,304 @@
           }
         }
       ]
+    },
+    {
+      "name": "Synthetic Patient API",
+      "item": [
+        {
+          "name": "GET /patients/1001 returns synthetic active patient",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "",
+                  "const maxResponseMs = Number(pm.environment.get(\"max_response_ms\") || 1000);",
+                  "",
+                  "pm.test(\"Response time is below configured threshold\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(maxResponseMs);",
+                  "});",
+                  "",
+                  "",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains expected synthetic patient 1001 data\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "",
+                  "    pm.expect(jsonData).to.have.property(\"patient_id\", 1001);",
+                  "    pm.expect(jsonData).to.have.property(\"name\", \"Alex Morgan\");",
+                  "    pm.expect(jsonData).to.have.property(\"status\", \"active\");",
+                  "    pm.expect(jsonData).to.have.property(\"last_visit\", \"2026-06-15\");",
+                  "});",
+                  "",
+                  "",
+                  "const sensitiveFields = [",
+                  "    \"ssn\",",
+                  "    \"social_security_number\",",
+                  "    \"password\",",
+                  "    \"token\",",
+                  "    \"api_key\",",
+                  "    \"secret\",",
+                  "    \"diagnosis\",",
+                  "    \"real_address\",",
+                  "    \"production_system_id\",",
+                  "    \"medical_record_number\"",
+                  "];",
+                  "",
+                  "pm.test(\"Response does not expose sensitive fields\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "",
+                  "    sensitiveFields.forEach(function (field) {",
+                  "        pm.expect(jsonData).to.not.have.property(field);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/patients/1001"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /patients/1002 returns synthetic inactive patient",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "",
+                  "const maxResponseMs = Number(pm.environment.get(\"max_response_ms\") || 1000);",
+                  "",
+                  "pm.test(\"Response time is below configured threshold\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(maxResponseMs);",
+                  "});",
+                  "",
+                  "",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains expected synthetic patient 1002 data\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "",
+                  "    pm.expect(jsonData).to.have.property(\"patient_id\", 1002);",
+                  "    pm.expect(jsonData).to.have.property(\"name\", \"Jordan Lee\");",
+                  "    pm.expect(jsonData).to.have.property(\"status\", \"inactive\");",
+                  "    pm.expect(jsonData).to.have.property(\"last_visit\", \"2026-05-20\");",
+                  "});",
+                  "",
+                  "",
+                  "const sensitiveFields = [",
+                  "    \"ssn\",",
+                  "    \"social_security_number\",",
+                  "    \"password\",",
+                  "    \"token\",",
+                  "    \"api_key\",",
+                  "    \"secret\",",
+                  "    \"diagnosis\",",
+                  "    \"real_address\",",
+                  "    \"production_system_id\",",
+                  "    \"medical_record_number\"",
+                  "];",
+                  "",
+                  "pm.test(\"Response does not expose sensitive fields\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "",
+                  "    sensitiveFields.forEach(function (field) {",
+                  "        pm.expect(jsonData).to.not.have.property(field);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/patients/1002"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /patients/9999 returns 404 for unknown patient",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "",
+                  "const maxResponseMs = Number(pm.environment.get(\"max_response_ms\") || 1000);",
+                  "",
+                  "pm.test(\"Response time is below configured threshold\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(maxResponseMs);",
+                  "});",
+                  "",
+                  "",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Unknown synthetic patient returns controlled detail message\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "",
+                  "    pm.expect(jsonData).to.have.property(\"detail\", \"Synthetic patient 9999 not found\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/patients/9999"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /patients/abc returns 422 for invalid path parameter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 422\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "",
+                  "const maxResponseMs = Number(pm.environment.get(\"max_response_ms\") || 1000);",
+                  "",
+                  "pm.test(\"Response time is below configured threshold\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(maxResponseMs);",
+                  "});",
+                  "",
+                  "",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Invalid patient ID returns validation detail array\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "",
+                  "    pm.expect(jsonData).to.have.property(\"detail\");",
+                  "    pm.expect(jsonData.detail).to.be.an(\"array\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/patients/abc"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /patients/1001 returns 405 for unsupported method",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 405\", function () {",
+                  "    pm.response.to.have.status(405);",
+                  "});",
+                  "",
+                  "",
+                  "const maxResponseMs = Number(pm.environment.get(\"max_response_ms\") || 1000);",
+                  "",
+                  "pm.test(\"Response time is below configured threshold\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(maxResponseMs);",
+                  "});",
+                  "",
+                  "",
+                  "pm.test(\"Response is valid JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Unsupported method returns controlled error detail\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "",
+                  "    pm.expect(jsonData).to.have.property(\"detail\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/patients/1001"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /openapi.json documents synthetic patient endpoint",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "",
+                  "const maxResponseMs = Number(pm.environment.get(\"max_response_ms\") || 1000);",
+                  "",
+                  "pm.test(\"Response time is below configured threshold\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(maxResponseMs);",
+                  "});",
+                  "",
+                  "",
+                  "pm.test(\"OpenAPI response is valid JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"OpenAPI contract documents synthetic patient endpoint\", function () {",
+                  "    const openapi = pm.response.json();",
+                  "",
+                  "    pm.expect(openapi).to.have.property(\"paths\");",
+                  "    pm.expect(openapi.paths).to.have.property(\"/patients/{patient_id}\");",
+                  "    pm.expect(openapi.paths[\"/patients/{patient_id}\"]).to.have.property(\"get\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/openapi.json"
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

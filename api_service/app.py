@@ -3,9 +3,8 @@ from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_
 from fastapi.responses import Response
 import time
 from datetime import datetime, UTC
-
-from fastapi import FastAPI, Header, HTTPException
-
+from fastapi import FastAPI, Header, HTTPException, Path
+from pydantic import BaseModel
 from framework.security.jwt_decoder import decode_jwt
 from framework.security.jwt_inspector import inspect_jwt
 
@@ -30,7 +29,27 @@ app = FastAPI(
     title="Synthetic Echo Service",
     description="Controlled test service for reliability and latency simulation.",
 )
+class PatientSummary(BaseModel):
+    patient_id: int
+    name: str
+    status: str
+    last_visit: str
 
+
+SYNTHETIC_PATIENTS = {
+    1001: {
+        "patient_id": 1001,
+        "name": "Alex Morgan",
+        "status": "active",
+        "last_visit": "2026-06-15",
+    },
+    1002: {
+        "patient_id": 1002,
+        "name": "Jordan Lee",
+        "status": "inactive",
+        "last_visit": "2026-05-20",
+    },
+}
 
 @app.get("/health")
 def health():
@@ -136,3 +155,30 @@ def secure_patient_summary(
         "role": security_result["role"],
         "timestamp_utc": datetime.now(UTC).isoformat(),
     }
+
+@app.get(
+    "/patients/{patient_id}",
+    response_model=PatientSummary,
+    tags=["Synthetic Patient API"],
+)
+def get_patient_summary(
+    patient_id: int = Path(
+        ...,
+        description="Synthetic patient identifier used for API validation examples",
+    )
+):
+    """
+    Return a synthetic patient summary for REST API testing.
+
+    This endpoint uses fictional test data only. It does not return PHI,
+    production records, credentials, secrets, or real patient information.
+    """
+    patient = SYNTHETIC_PATIENTS.get(patient_id)
+
+    if patient is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Synthetic patient {patient_id} not found",
+        )
+
+    return patient

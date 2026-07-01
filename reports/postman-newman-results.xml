@@ -1,22 +1,60 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="SDET Reliability Framework API Tests" tests="4" time="0.240">
-  <testsuite name="Health Check - API is UP" id="cddb8af8-1eb1-4d60-886f-440184a160bd" timestamp="2026-07-01T01:19:32.200Z" tests="3" failures="0" errors="0" time="0.213">
-    <testcase name="Status code is 200" time="0.213" classname="HealthCheckApiIsUp"/>
-    <testcase name="Response time is within local threshold" time="0.213" classname="HealthCheckApiIsUp"/>
-    <testcase name="Health response includes status" time="0.213" classname="HealthCheckApiIsUp"/>
+<testsuites name="SDET Reliability Framework API Tests" tests="10" time="0.425">
+  <testsuite name="Health Check - API is UP" id="e223c802-9c83-4772-bc78-9ac6abdeb7a4" timestamp="2026-07-01T19:35:15.108Z" tests="3" failures="0" errors="0" time="0.266">
+    <testcase name="Status code is 200" time="0.266" classname="HealthCheckApiIsUp"/>
+    <testcase name="Response time is within local threshold" time="0.266" classname="HealthCheckApiIsUp"/>
+    <testcase name="Health response includes status" time="0.266" classname="HealthCheckApiIsUp"/>
   </testsuite>
-  <testsuite name="Metrics Endpoint - Prometheus Metrics Available" id="ac9e8f30-b054-4099-ab56-2bed925513cc" timestamp="2026-07-01T01:19:32.200Z" tests="3" failures="0" errors="0" time="0.016">
-    <testcase name="Status code is 200" time="0.016" classname="MetricsEndpointPrometheusMetricsAvailable"/>
-    <testcase name="Metrics response is not empty" time="0.016" classname="MetricsEndpointPrometheusMetricsAvailable"/>
-    <testcase name="Metrics response includes Prometheus-style help output" time="0.016" classname="MetricsEndpointPrometheusMetricsAvailable"/>
+  <testsuite name="Metrics Endpoint - Prometheus Metrics Available" id="80a78411-c710-4451-b8dd-05084005219d" timestamp="2026-07-01T19:35:15.108Z" tests="3" failures="0" errors="0" time="0.029">
+    <testcase name="Status code is 200" time="0.029" classname="MetricsEndpointPrometheusMetricsAvailable"/>
+    <testcase name="Metrics response is not empty" time="0.029" classname="MetricsEndpointPrometheusMetricsAvailable"/>
+    <testcase name="Metrics response includes Prometheus-style help output" time="0.029" classname="MetricsEndpointPrometheusMetricsAvailable"/>
   </testsuite>
-  <testsuite name="OpenAPI Contract - Schema Available" id="2a991de4-1da9-4871-9782-1b1c498305a0" timestamp="2026-07-01T01:19:32.200Z" tests="3" failures="0" errors="0" time="0.006">
-    <testcase name="Status code is 200" time="0.006" classname="OpenApiContractSchemaAvailable"/>
-    <testcase name="OpenAPI schema includes required top-level fields" time="0.006" classname="OpenApiContractSchemaAvailable"/>
-    <testcase name="OpenAPI schema documents the health endpoint" time="0.006" classname="OpenApiContractSchemaAvailable"/>
+  <testsuite name="OpenAPI Contract - Schema Available" id="2680e181-c559-4df7-9d4d-c1c2c3773a33" timestamp="2026-07-01T19:35:15.108Z" tests="3" failures="0" errors="0" time="0.022">
+    <testcase name="Status code is 200" time="0.022" classname="OpenApiContractSchemaAvailable"/>
+    <testcase name="OpenAPI schema includes required top-level fields" time="0.022" classname="OpenApiContractSchemaAvailable"/>
+    <testcase name="OpenAPI schema documents the health endpoint" time="0.022" classname="OpenApiContractSchemaAvailable"/>
   </testsuite>
-  <testsuite name="Negative Test - Invalid Endpoint Returns 404" id="437b134a-7c85-48cc-9729-fa26ad5c0845" timestamp="2026-07-01T01:19:32.200Z" tests="2" failures="0" errors="0" time="0.005">
-    <testcase name="Invalid endpoint returns 404" time="0.005" classname="NegativeTestInvalidEndpointReturns404"/>
-    <testcase name="Error response is controlled" time="0.005" classname="NegativeTestInvalidEndpointReturns404"/>
+  <testsuite name="Negative Test - Invalid Endpoint Returns 404" id="2b6c6fe3-4ca3-4a02-9d16-825ac5698cf4" timestamp="2026-07-01T19:35:15.108Z" tests="2" failures="0" errors="0" time="0.006">
+    <testcase name="Invalid endpoint returns 404" time="0.006" classname="NegativeTestInvalidEndpointReturns404"/>
+    <testcase name="Error response is controlled" time="0.006" classname="NegativeTestInvalidEndpointReturns404"/>
+  </testsuite>
+  <testsuite name="Synthetic Patient API / GET /patients/1001 returns synthetic active patient" id="0eed9c10-a915-49c3-a9de-e3b6530a2c99" timestamp="2026-07-01T19:35:15.108Z" tests="5" failures="0" errors="0" time="0.026">
+    <testcase name="Status code is 200" time="0.026" classname="SyntheticPatientApiGetPatients1001ReturnsSyntheticActivePatient"/>
+    <testcase name="Response time is below configured threshold" time="0.026" classname="SyntheticPatientApiGetPatients1001ReturnsSyntheticActivePatient"/>
+    <testcase name="Response is valid JSON" time="0.026" classname="SyntheticPatientApiGetPatients1001ReturnsSyntheticActivePatient"/>
+    <testcase name="Response contains expected synthetic patient 1001 data" time="0.026" classname="SyntheticPatientApiGetPatients1001ReturnsSyntheticActivePatient"/>
+    <testcase name="Response does not expose sensitive fields" time="0.026" classname="SyntheticPatientApiGetPatients1001ReturnsSyntheticActivePatient"/>
+  </testsuite>
+  <testsuite name="Synthetic Patient API / GET /patients/1002 returns synthetic inactive patient" id="1222d94e-d273-448e-aba0-9c75a86cd395" timestamp="2026-07-01T19:35:15.108Z" tests="5" failures="0" errors="0" time="0.024">
+    <testcase name="Status code is 200" time="0.024" classname="SyntheticPatientApiGetPatients1002ReturnsSyntheticInactivePatient"/>
+    <testcase name="Response time is below configured threshold" time="0.024" classname="SyntheticPatientApiGetPatients1002ReturnsSyntheticInactivePatient"/>
+    <testcase name="Response is valid JSON" time="0.024" classname="SyntheticPatientApiGetPatients1002ReturnsSyntheticInactivePatient"/>
+    <testcase name="Response contains expected synthetic patient 1002 data" time="0.024" classname="SyntheticPatientApiGetPatients1002ReturnsSyntheticInactivePatient"/>
+    <testcase name="Response does not expose sensitive fields" time="0.024" classname="SyntheticPatientApiGetPatients1002ReturnsSyntheticInactivePatient"/>
+  </testsuite>
+  <testsuite name="Synthetic Patient API / GET /patients/9999 returns 404 for unknown patient" id="9ea17f99-2ce5-49d0-9b9b-54264e25b2ec" timestamp="2026-07-01T19:35:15.108Z" tests="4" failures="0" errors="0" time="0.016">
+    <testcase name="Status code is 404" time="0.016" classname="SyntheticPatientApiGetPatients9999Returns404ForUnknownPatient"/>
+    <testcase name="Response time is below configured threshold" time="0.016" classname="SyntheticPatientApiGetPatients9999Returns404ForUnknownPatient"/>
+    <testcase name="Response is valid JSON" time="0.016" classname="SyntheticPatientApiGetPatients9999Returns404ForUnknownPatient"/>
+    <testcase name="Unknown synthetic patient returns controlled detail message" time="0.016" classname="SyntheticPatientApiGetPatients9999Returns404ForUnknownPatient"/>
+  </testsuite>
+  <testsuite name="Synthetic Patient API / GET /patients/abc returns 422 for invalid path parameter" id="8b0e5b60-900b-4432-95bf-b193d7b759db" timestamp="2026-07-01T19:35:15.108Z" tests="4" failures="0" errors="0" time="0.005">
+    <testcase name="Status code is 422" time="0.005" classname="SyntheticPatientApiGetPatientsAbcReturns422ForInvalidPathParameter"/>
+    <testcase name="Response time is below configured threshold" time="0.005" classname="SyntheticPatientApiGetPatientsAbcReturns422ForInvalidPathParameter"/>
+    <testcase name="Response is valid JSON" time="0.005" classname="SyntheticPatientApiGetPatientsAbcReturns422ForInvalidPathParameter"/>
+    <testcase name="Invalid patient ID returns validation detail array" time="0.005" classname="SyntheticPatientApiGetPatientsAbcReturns422ForInvalidPathParameter"/>
+  </testsuite>
+  <testsuite name="Synthetic Patient API / POST /patients/1001 returns 405 for unsupported method" id="f94798a5-eef4-49ea-ac59-1e9c55792e2c" timestamp="2026-07-01T19:35:15.108Z" tests="4" failures="0" errors="0" time="0.014">
+    <testcase name="Status code is 405" time="0.014" classname="SyntheticPatientApiPostPatients1001Returns405ForUnsupportedMethod"/>
+    <testcase name="Response time is below configured threshold" time="0.014" classname="SyntheticPatientApiPostPatients1001Returns405ForUnsupportedMethod"/>
+    <testcase name="Response is valid JSON" time="0.014" classname="SyntheticPatientApiPostPatients1001Returns405ForUnsupportedMethod"/>
+    <testcase name="Unsupported method returns controlled error detail" time="0.014" classname="SyntheticPatientApiPostPatients1001Returns405ForUnsupportedMethod"/>
+  </testsuite>
+  <testsuite name="Synthetic Patient API / GET /openapi.json documents synthetic patient endpoint" id="9cf3b85c-c243-434b-995b-97b6ca87e0d6" timestamp="2026-07-01T19:35:15.108Z" tests="4" failures="0" errors="0" time="0.017">
+    <testcase name="Status code is 200" time="0.017" classname="SyntheticPatientApiGetOpenapiJsonDocumentsSyntheticPatientEndpoint"/>
+    <testcase name="Response time is below configured threshold" time="0.017" classname="SyntheticPatientApiGetOpenapiJsonDocumentsSyntheticPatientEndpoint"/>
+    <testcase name="OpenAPI response is valid JSON" time="0.017" classname="SyntheticPatientApiGetOpenapiJsonDocumentsSyntheticPatientEndpoint"/>
+    <testcase name="OpenAPI contract documents synthetic patient endpoint" time="0.017" classname="SyntheticPatientApiGetOpenapiJsonDocumentsSyntheticPatientEndpoint"/>
   </testsuite>
 </testsuites>
