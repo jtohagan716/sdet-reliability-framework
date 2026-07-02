@@ -16,16 +16,22 @@ from framework.security.jwt_inspector import inspect_jwt
 TRUSTED_ISSUER = "https://company-login.com"
 REQUIRED_ROLE = "provider"
 
-REQUEST_COUNT = Counter(
-    "sdet_api_request_count",
-    "Total number of API requests received",
-    ["endpoint"],
+HTTP_REQUESTS_TOTAL = Counter(
+    "sdet_http_requests_total",
+    "Total HTTP requests by method, path, and status code",
+    ["method", "path", "status_code"],
 )
 
-REQUEST_LATENCY = Histogram(
-    "sdet_api_request_latency_seconds",
-    "API request latency in seconds",
-    ["endpoint"],
+HTTP_REQUEST_DURATION_SECONDS = Histogram(
+    "sdet_http_request_duration_seconds",
+    "HTTP request duration in seconds by method, path, and status code",
+    ["method", "path", "status_code"],
+)
+
+PATIENT_LOOKUP_TOTAL = Counter(
+    "sdet_patient_lookup_total",
+    "Synthetic patient lookup outcomes",
+    ["outcome"],
 )
 
 
@@ -41,6 +47,16 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger("sdet_reliability_api")
+
+def get_metric_path(request: Request) -> str:
+    route = request.scope.get("route")
+    route_path = getattr(route, "path", None)
+
+    if route_path:
+        return route_path
+
+    return request.url.path
+
 
 def get_or_create_request_id(request: Request) -> str:
     incoming_request_id = request.headers.get("X-Request-ID")
@@ -67,6 +83,20 @@ async def log_request_timing(request: Request, call_next):
         response = await call_next(request)
     except Exception:
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        duration_seconds = duration_ms / 1000
+        metric_path = get_metric_path(request)
+
+        HTTP_REQUESTS_TOTAL.labels(
+            method=request.method,
+            path=metric_path,
+            status_code="500",
+        ).inc()
+
+        HTTP_REQUEST_DURATION_SECONDS.labels(
+            method=request.method,
+            path=metric_path,
+            status_code="500",
+        ).observe(duration_seconds)
 
         logger.exception(
             "request_failed request_id=%s method=%s path=%s duration_ms=%s",
@@ -78,6 +108,21 @@ async def log_request_timing(request: Request, call_next):
         raise
 
     duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+    duration_seconds = duration_ms / 1000
+    metric_path = get_metric_path(request)
+    status_code = str(response.status_code)
+
+    HTTP_REQUESTS_TOTAL.labels(
+        method=request.method,
+        path=metric_path,
+        status_code=status_code,
+    ).inc()
+
+    HTTP_REQUEST_DURATION_SECONDS.labels(
+        method=request.method,
+        path=metric_path,
+        status_code=status_code,
+    ).observe(duration_seconds)
 
     response.headers["X-Request-ID"] = request_id
 
@@ -92,17 +137,6 @@ async def log_request_timing(request: Request, call_next):
 
     return response
 
-    duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
-
-    logger.info(
-        "request_complete method=%s path=%s status_code=%s duration_ms=%s",
-        request.method,
-        request.url.path,
-        response.status_code,
-        duration_ms,
-    )
-
-    return response
 
 
 class PatientSummary(BaseModel):
@@ -129,14 +163,10 @@ SYNTHETIC_PATIENTS = {
 
 @app.get("/health")
 def health():
-    endpoint = "/health"
-    REQUEST_COUNT.labels(endpoint=endpoint).inc()
-
-    with REQUEST_LATENCY.labels(endpoint=endpoint).time():
-        return {
-            "status": "UP",
-            "timestamp_utc": datetime.now(UTC).isoformat(),
-        }
+    return {
+        "status": "UP",
+        "timestamp_utc": datetime.now(UTC).isoformat(),
+    }
 
 @app.get("/metrics")
 def metrics():
@@ -260,6 +290,8 @@ def get_patient_summary(
     patient = SYNTHETIC_PATIENTS.get(patient_id)
 
     if patient is None:
+        PATIENT_LOOKUP_TOTAL.labels(outcome="not_found").inc()
+
         logger.warning(
             "patient_lookup_not_found request_id=%s patient_id=%s",
             request_id,
@@ -270,6 +302,8 @@ def get_patient_summary(
             status_code=404,
             detail=f"Synthetic patient {patient_id} not found",
         )
+
+    PATIENT_LOOKUP_TOTAL.labels(outcome="success").inc()
 
     logger.info(
         "patient_lookup_success request_id=%s patient_id=%s status=%s",
