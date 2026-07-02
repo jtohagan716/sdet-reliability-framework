@@ -5,6 +5,7 @@ import time
 import uuid
 from datetime import datetime, UTC
 
+from fastapi.responses import HTMLResponse
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from fastapi import FastAPI, Header, HTTPException, Path, Request
 from fastapi.responses import Response
@@ -261,6 +262,80 @@ def secure_patient_summary(
         "role": security_result["role"],
         "timestamp_utc": datetime.now(UTC).isoformat(),
     }
+
+@app.get("/patient-lookup", response_class=HTMLResponse)
+def patient_lookup_page() -> str:
+    return """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Patient Lookup</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+    <main>
+        <h1>Patient Lookup</h1>
+
+        <p id="lookup-instructions">
+            Enter a synthetic patient ID to validate patient lookup behavior.
+        </p>
+
+        <form aria-describedby="lookup-instructions">
+            <label for="patient-id">Patient ID</label>
+            <input
+                id="patient-id"
+                name="patient-id"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+            >
+
+            <button type="submit">Lookup Patient</button>
+        </form>
+
+        <section
+            aria-live="polite"
+            aria-label="Lookup result"
+            id="lookup-result"
+        >
+            No lookup has been submitted.
+        </section>
+    </main>
+
+    <script>
+        const form = document.querySelector("form");
+        const input = document.querySelector("#patient-id");
+        const result = document.querySelector("#lookup-result");
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const patientId = input.value.trim();
+
+            if (!patientId) {
+                result.textContent = "Enter a patient ID before submitting.";
+                return;
+            }
+
+            try {
+                const response = await fetch(`/patients/${patientId}`);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    result.textContent = `Patient lookup succeeded for ${data.patient_id}.`;
+                    return;
+                }
+
+                result.textContent = `Patient lookup returned status ${response.status}.`;
+            } catch (error) {
+                result.textContent = "Patient lookup failed because the API could not be reached.";
+            }
+        });
+    </script>
+</body>
+</html>
+"""
 
 @app.get(
     "/patients/{patient_id}",
