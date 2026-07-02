@@ -2,6 +2,7 @@ import logging
 import os
 import random
 import time
+import uuid
 from datetime import datetime, UTC
 
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
@@ -41,13 +42,23 @@ logging.basicConfig(
 
 logger = logging.getLogger("sdet_reliability_api")
 
+def get_or_create_request_id(request: Request) -> str:
+    incoming_request_id = request.headers.get("X-Request-ID")
+
+    if incoming_request_id:
+        return incoming_request_id[:128]
+
+    return str(uuid.uuid4())
 
 @app.middleware("http")
 async def log_request_timing(request: Request, call_next):
     start_time = time.perf_counter()
+    request_id = get_or_create_request_id(request)
+    request.state.request_id = request_id
 
     logger.info(
-        "request_start method=%s path=%s",
+        "request_start request_id=%s method=%s path=%s",
+        request_id,
         request.method,
         request.url.path,
     )
@@ -58,12 +69,28 @@ async def log_request_timing(request: Request, call_next):
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
         logger.exception(
-            "request_failed method=%s path=%s duration_ms=%s",
+            "request_failed request_id=%s method=%s path=%s duration_ms=%s",
+            request_id,
             request.method,
             request.url.path,
             duration_ms,
         )
         raise
+
+    duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+
+    response.headers["X-Request-ID"] = request_id
+
+    logger.info(
+        "request_complete request_id=%s method=%s path=%s status_code=%s duration_ms=%s",
+        request_id,
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+
+    return response
 
     duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
@@ -211,11 +238,13 @@ def secure_patient_summary(
     tags=["Synthetic Patient API"],
 )
 def get_patient_summary(
+    request: Request,
     patient_id: int = Path(
         ...,
         description="Synthetic patient identifier used for API validation examples",
     )
 ):
+    request_id = request.state.request_id
     """
     Return a synthetic patient summary for REST API testing.
 
@@ -223,7 +252,8 @@ def get_patient_summary(
     production records, credentials, secrets, or real patient information.
     """
     logger.info(
-        "patient_lookup_started patient_id=%s",
+        "patient_lookup_started request_id=%s patient_id=%s",
+        request_id,
         patient_id,
     )
 
@@ -231,7 +261,8 @@ def get_patient_summary(
 
     if patient is None:
         logger.warning(
-            "patient_lookup_not_found patient_id=%s",
+            "patient_lookup_not_found request_id=%s patient_id=%s",
+            request_id,
             patient_id,
         )
 
@@ -241,7 +272,8 @@ def get_patient_summary(
         )
 
     logger.info(
-        "patient_lookup_success patient_id=%s status=%s",
+        "patient_lookup_success request_id=%s patient_id=%s status=%s",
+        request_id,
         patient_id,
         patient["status"],
     )

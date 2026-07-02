@@ -103,3 +103,22 @@ def test_patient_summary_response_model_excludes_sensitive_fields():
 
     for sensitive_field in SENSITIVE_FIELDS:
         assert sensitive_field not in data
+
+def test_patient_summary_generates_request_id_when_missing():
+    response = client.get("/patients/1001")
+
+    assert response.status_code == 200
+    assert "X-Request-ID" in response.headers
+    assert response.headers["X-Request-ID"] != ""
+
+
+def test_patient_summary_preserves_incoming_request_id():
+    request_id = "james-test-request-id-123"
+
+    response = client.get(
+        "/patients/1001",
+        headers={"X-Request-ID": request_id},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["X-Request-ID"] == request_id
