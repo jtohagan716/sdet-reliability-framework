@@ -1,9 +1,12 @@
+import logging
+import os
 import random
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
-from fastapi.responses import Response
 import time
 from datetime import datetime, UTC
-from fastapi import FastAPI, Header, HTTPException, Path
+
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from fastapi import FastAPI, Header, HTTPException, Path, Request
+from fastapi.responses import Response
 from pydantic import BaseModel
 from framework.security.jwt_decoder import decode_jwt
 from framework.security.jwt_inspector import inspect_jwt
@@ -29,6 +32,52 @@ app = FastAPI(
     title="Synthetic Echo Service",
     description="Controlled test service for reliability and latency simulation.",
 )
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format="%(asctime)s level=%(levelname)s logger=%(name)s message=%(message)s",
+)
+
+logger = logging.getLogger("sdet_reliability_api")
+
+
+@app.middleware("http")
+async def log_request_timing(request: Request, call_next):
+    start_time = time.perf_counter()
+
+    logger.info(
+        "request_start method=%s path=%s",
+        request.method,
+        request.url.path,
+    )
+
+    try:
+        response = await call_next(request)
+    except Exception:
+        duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+
+        logger.exception(
+            "request_failed method=%s path=%s duration_ms=%s",
+            request.method,
+            request.url.path,
+            duration_ms,
+        )
+        raise
+
+    duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+
+    logger.info(
+        "request_complete method=%s path=%s status_code=%s duration_ms=%s",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+
+    return response
+
+
 class PatientSummary(BaseModel):
     patient_id: int
     name: str
@@ -173,12 +222,28 @@ def get_patient_summary(
     This endpoint uses fictional test data only. It does not return PHI,
     production records, credentials, secrets, or real patient information.
     """
+    logger.info(
+        "patient_lookup_started patient_id=%s",
+        patient_id,
+    )
+
     patient = SYNTHETIC_PATIENTS.get(patient_id)
 
     if patient is None:
+        logger.warning(
+            "patient_lookup_not_found patient_id=%s",
+            patient_id,
+        )
+
         raise HTTPException(
             status_code=404,
             detail=f"Synthetic patient {patient_id} not found",
         )
+
+    logger.info(
+        "patient_lookup_success patient_id=%s status=%s",
+        patient_id,
+        patient["status"],
+    )
 
     return patient
