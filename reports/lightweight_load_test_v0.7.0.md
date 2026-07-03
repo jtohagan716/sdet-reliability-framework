@@ -34,4 +34,6 @@ This report captures a lightweight local load test using a weighted traffic mix.
 
 ## Reliability Value
 
-This load test provides evidence about API behavior under a small controlled traffic mix. It helps compare expected behavior, response time, error rate, and throughput against the previous baseline.
+This load test provides results about API behavior under a small controlled traffic mix. It helps compare expected behavior, response time, error rate, and throughput against the previous baseline.
+
+

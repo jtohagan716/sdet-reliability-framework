@@ -4,7 +4,7 @@
 
 This project includes basic accessibility smoke validation for a simple user-facing Patient Lookup page.
 
-The goal is to demonstrate awareness of accessibility and Section 508-oriented testing practices in a controlled portfolio-scale application.
+The goal is to demonstrate awareness of accessibility and Section 508-oriented testing practices in a controlled practice-scale application.
 
 This is not a full formal Section 508 certification. It is a first automated accessibility smoke layer.
 
@@ -111,3 +111,5 @@ Possible future improvements:
 - add screen reader testing notes
 - add CI accessibility quality gate
 - add Section 508 checklist documentation
+
+

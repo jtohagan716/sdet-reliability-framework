@@ -123,7 +123,7 @@ The tests confirm that:
 
 ## Release-Readiness Value
 
-These metrics support release-readiness by giving testers and engineers measurable evidence about API behavior.
+These metrics support release-readiness by giving testers and engineers measurable results about API behavior.
 
 They help answer questions such as:
 
@@ -143,5 +143,7 @@ Possible next steps:
 - Track average and percentile response times.
 - Add lightweight load testing.
 - Compare before/after tuning results.
-- Create Grafana dashboard evidence.
+- Create Grafana dashboard results.
 - Define release quality thresholds for response time and error rate.
+
+

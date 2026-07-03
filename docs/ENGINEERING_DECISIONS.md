@@ -10,7 +10,7 @@ This document records major architectural decisions made during development of t
 
 
 
-\# ADR-001 — Standardize Quality Evidence
+\# ADR-001 — Standardize Quality Signals
 
 
 
@@ -34,7 +34,7 @@ Examples included:
 
 
 
-This increased coupling between evidence providers and reporting components.
+This increased coupling between quality signal providers and reporting components.
 
 
 
@@ -46,7 +46,7 @@ Create a shared `QualitySignal` data model.
 
 
 
-Every evidence provider returns a `QualitySignal`.
+Every quality signal provider returns a `QualitySignal`.
 
 
 
@@ -60,7 +60,7 @@ Every evidence provider returns a `QualitySignal`.
 
 \- Simplified report generation
 
-\- Supports future evidence providers
+\- Supports future quality signal providers
 
 
 
@@ -88,7 +88,7 @@ The release report was responsible for:
 
 
 
-\- collecting evidence
+\- collecting validation results
 
 \- making release decisions
 
@@ -138,7 +138,7 @@ Introduces another class into the framework.
 
 
 
-\# ADR-003 — Standardize Evidence Providers
+\# ADR-003 — Standardize Quality Signal Providers
 
 
 
@@ -254,5 +254,7 @@ Future ADRs will include:
 
 \- operational thresholds
 
-\- evidence weighting
+\- quality signal weighting
+
+
 

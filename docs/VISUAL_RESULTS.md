@@ -1,17 +1,17 @@
 @'
-# Visual Evidence
+# Visual Results
 
 ## Purpose
 
-This document provides visual evidence that the SDET Reliability Framework is operational, observable, and actively maintained.
+This document provides visual results that the SDET Reliability Framework is operational, observable, and actively maintained.
 
 The screenshots below support the project’s core claim: the framework is not only documented, but running locally with containerized services, monitoring, dashboard visibility, and GitHub-based development history.
 
 ---
 
-## Evidence Summary
+## Results Summary
 
-| Evidence Area | Screenshot | What It Demonstrates |
+| Results Area | Screenshot | What It Demonstrates |
 |---|---|---|
 | Docker runtime stack | Docker stack running | FastAPI, Prometheus, and Grafana are running locally |
 | GitHub commit activity | Commit history | The repository shows active development and iteration |
@@ -45,10 +45,9 @@ This supports local reproducibility and confirms that the reliability stack can 
 
 This screenshot shows repository activity over time.
 
-The commit history demonstrates active development and ongoing iteration rather than a static or abandoned portfolio project.
+The commit history demonstrates active development and ongoing iteration rather than a static or abandoned project.
 
-This is useful evidence for hiring managers and technical reviewers because it shows consistent project work, incremental improvements, and continued investment in modern QA and reliability engineering skills.
-
+These results show iterative project development, incremental improvements, and continued maintenance of the framework.
 ---
 
 ## GitHub Repository Structure
@@ -80,7 +79,7 @@ This screenshot shows the Grafana dashboard for the SDET Reliability Framework.
 
 The dashboard provides visual monitoring for runtime signals such as API health and response time.
 
-This supports the project’s observability goal: quality decisions should be informed by runtime evidence, not only by test pass/fail results.
+This supports the project’s observability goal: quality decisions should be informed by runtime behavior and test results, not only by pass/fail status.
 
 ---
 
@@ -100,7 +99,7 @@ This confirms that:
 
 ---
 
-## Why This Evidence Matters
+## Why This Results Matters
 
 The screenshots demonstrate that the framework includes more than isolated automated tests.
 
@@ -114,7 +113,10 @@ They show a working quality and reliability stack with:
 - Active GitHub development
 - Organized repository structure
 
-Together, this visual evidence supports the broader goal of the project:
+Together, this visual results supports the broader goal of the project:
 
 ```text
 Test → Observe → Validate → Assess Risk → Recommend
+
+
+

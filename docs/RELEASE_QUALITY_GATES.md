@@ -8,7 +8,7 @@ A quality gate is a required checkpoint that software must pass before moving fo
 
 In plain English:
 
-    Do not release unless the required evidence passes.
+    Do not release unless the required checks pass.
 
 ## Release Quality Gate Script
 
@@ -38,8 +38,8 @@ The release quality gate currently runs:
 | Newman API regression | Validates the Postman Application Programming Interface (API) regression collection |
 | Focused Section 508 accessibility smoke validation | Validates basic accessibility behavior on the Patient Lookup page |
 | Full Playwright automation | Validates user interface (UI), Application Programming Interface (API), and workflow checks |
-| Performance baseline evidence | Captures known-good local response-time and error-rate evidence |
-| Lightweight load test evidence | Captures weighted concurrent traffic behavior |
+| performance baseline results | Captures known-good local response-time and error-rate results |
+| lightweight load test results | Captures weighted concurrent traffic behavior |
 | Local Docker/API smoke validation | Confirms Docker, API health, patient endpoints, Pytest, and Newman checks pass together |
 
 ## International Software Testing Qualifications Board (ISTQB) / Certified Tester Foundation Level (CTFL) Connection
@@ -57,8 +57,8 @@ For this project, release exit criteria include:
 - Application Programming Interface (API) checks pass
 - Playwright automation passes
 - accessibility smoke validation passes
-- performance baseline evidence is generated
-- lightweight load test evidence is generated
+- performance baseline results is generated
+- lightweight load test results is generated
 - Docker smoke validation passes
 
 ### Regression Testing
@@ -72,11 +72,11 @@ The release quality gate runs regression checks through:
 - Playwright
 - local smoke validation
 
-### Test Evidence
+### test results
 
-Test evidence is proof that validation was performed.
+test results is proof that validation was performed.
 
-This project stores evidence in:
+This project stores results in:
 
 - generated reports
 - terminal results
@@ -109,7 +109,7 @@ This does not claim full Section 508 certification. It is a release-readiness sm
 
 ## Reliability Value
 
-The release quality gate helps replace ad hoc release decisions with repeatable validation evidence.
+The release quality gate helps replace ad hoc release decisions with repeatable validation results.
 
 Instead of saying:
 
@@ -135,3 +135,6 @@ Possible improvements:
 - Add axe-core accessibility scanning.
 - Add Kubernetes deployment validation.
 - Add release checklist documentation.
+
+
+

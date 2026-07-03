@@ -4,13 +4,13 @@
 
 This project uses diagnostic logging to make API behavior easier to troubleshoot during local validation, CI investigation, and release-readiness review.
 
-The goal is not just to confirm that an endpoint returned a response. The goal is to capture enough safe operational evidence to understand what happened during a request.
+The goal is not just to confirm that an endpoint returned a response. The goal is to capture enough safe operational results to understand what happened during a request.
 
 ## Agile Testing Context
 
 This work supports the following reliability story:
 
-As a reliability-focused QA/SDET, I want the API to log request handling and timing, so that failures and slow behavior can be diagnosed with evidence.
+As a reliability-focused QA/SDET, I want the API to log request handling and timing, so that failures and slow behavior can be diagnosed with results.
 
 ## Acceptance Criteria
 
@@ -101,7 +101,7 @@ Confirm the status code and duration_ms.
 Compare the observed behavior to Pytest, Newman, and smoke validation expectations.
 Release-Readiness Value
 
-Diagnostic logging supports release-readiness by providing evidence that the API can be observed during normal, negative, and failure-path validation.
+Diagnostic logging supports release-readiness by providing results that the API can be observed during normal, negative, and failure-path validation.
 
 This improves the ability to identify whether a failure is caused by:
 
@@ -111,4 +111,6 @@ missing test data
 runtime/container issues
 slow response behavior
 test or environment configuration
+
+
 

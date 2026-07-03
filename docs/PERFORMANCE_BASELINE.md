@@ -4,13 +4,13 @@
 
 This project includes a repeatable performance baseline script to measure selected API endpoints under normal local conditions.
 
-The baseline is not a full load test. It is a lightweight evidence artifact used to understand current response-time behavior and compare future changes against a known-good run.
+The baseline is not a full load test. It is a lightweight results artifact used to understand current response-time behavior and compare future changes against a known-good run.
 
 ## Agile Testing Context
 
 This work supports the following reliability story:
 
-As a reliability-focused QA/SDET, I want to capture baseline API response-time and error-rate evidence, so that future changes can be compared against a known-good performance profile.
+As a reliability-focused QA/SDET, I want to capture baseline API response-time and error-rate results, so that future changes can be compared against a known-good performance profile.
 
 ## Acceptance Criteria
 
@@ -81,7 +81,7 @@ A clean baseline should show:
 
 A high max or p95 value in a small local run may reflect cold start, local machine load, Docker startup behavior, or temporary resource contention. This is why future performance work should include warm-up runs and more samples.
 
-## Current Baseline Evidence
+## Current Baseline Results
 
 Current generated report:
 
@@ -91,7 +91,7 @@ This report captures a local baseline for `/health`, `/patients/1001`, and `/pat
 
 ## Reliability Value
 
-This baseline gives testers and engineers evidence for release-readiness and future comparison.
+This baseline gives testers and engineers results for release-readiness and future comparison.
 
 It helps answer:
 
@@ -110,5 +110,7 @@ Possible next steps:
 - Add weighted traffic mix.
 - Add lightweight load testing.
 - Compare before/after tuning results.
-- Add Grafana dashboard screenshots or evidence.
+- Add Grafana dashboard screenshots or results.
 - Define release thresholds for response time and error rate.
+
+
