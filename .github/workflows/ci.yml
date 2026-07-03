@@ -5,9 +5,11 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   docker-build-validation:
+    name: Docker Build Validation
     runs-on: ubuntu-latest
 
     steps:
@@ -17,10 +19,11 @@ jobs:
       - name: Build Docker image
         run: docker build -t sdet-reliability-api .
 
-      - name: Validate Docker image
+      - name: Validate Docker image exists
         run: docker images sdet-reliability-api
 
   python-reliability-tests:
+    name: Python Reliability Tests
     runs-on: windows-latest
 
     env:
@@ -43,20 +46,48 @@ jobs:
       - name: Start FastAPI service
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force reports | Out-Null
+
           Start-Process python -ArgumentList "-m uvicorn api_service.app:app --host 127.0.0.1 --port 8000"
-          Start-Sleep -Seconds 5
+
+          for ($i = 1; $i -le 30; $i++) {
+            try {
+              $response = Invoke-WebRequest -Uri "http://127.0.0.1:8000/health" -UseBasicParsing -TimeoutSec 2
+
+              if ($response.StatusCode -eq 200) {
+                Write-Host "FastAPI service is ready"
+                exit 0
+              }
+            }
+            catch {
+              Write-Host "Waiting for FastAPI service... attempt $i"
+              Start-Sleep -Seconds 2
+            }
+          }
+
+          throw "FastAPI service did not become ready"
 
       - name: Run Python reliability and security test suite
-        run: python -m pytest -q
+        run: python -m pytest -q --junitxml=reports/pytest-results.xml
 
-      - name: Run Performance CI Gate
+      - name: Run performance CI gate
         run: python scripts/ci_performance_gate.py
 
-  playwright-automation-tests:
+      - name: Upload Pytest results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: reports/pytest-results.xml
+          if-no-files-found: warn
+
+  api-and-ui-validation:
+    name: API and UI Validation
     runs-on: ubuntu-latest
 
     env:
       PYTHONPATH: ${{ github.workspace }}
+      PLAYWRIGHT_JUNIT_OUTPUT_NAME: reports/playwright-results.xml
 
     steps:
       - name: Checkout repository
@@ -107,6 +138,7 @@ jobs:
 
       - name: Run focused Playwright automation suite
         run: |
+          mkdir -p reports
           npx playwright test \
             tests/ui/canary.spec.ts \
             tests/ui/fastapi_health.spec.ts \
@@ -118,7 +150,17 @@ jobs:
             tests/ui/performance_baseline.spec.ts \
             tests/ui/observability_validation.spec.ts \
             tests/ui/prometheus_validation.spec.ts \
-            --project=chromium
+            tests/ui/patient_lookup_accessibility.spec.ts \
+            --project=chromium \
+            --reporter=line,junit
+
+      - name: Upload Playwright results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: reports/playwright-results.xml
+          if-no-files-found: warn
 
       - name: Stop Docker Compose observability stack
         if: always()
