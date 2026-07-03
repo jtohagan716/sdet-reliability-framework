@@ -10,7 +10,7 @@ The SDET Reliability Framework is a quality engineering platform designed to eva
 
 
 
-The framework combines automated testing, runtime health checks, observability validation, and release assessment into one evidence-driven quality process.
+The framework combines automated testing, runtime health checks, observability validation, and release assessment into one validation-focused quality process.
 
 
 
@@ -93,4 +93,6 @@ ReleaseAssessment
      v
 
 Release Readiness Report
+
+
 

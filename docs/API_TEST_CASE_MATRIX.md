@@ -4,7 +4,7 @@
 
 This document defines the REST API test case matrix for the SDET Reliability Framework.
 
-The goal of this matrix is to show how API testing is planned, organized, and connected to release-readiness evidence. Rather than testing endpoints randomly, the matrix identifies the endpoint, method, scenario, expected behavior, validation points, automation layer, and release impact.
+The goal of this matrix is to show how API testing is planned, organized, and connected to release-readiness results. Rather than testing endpoints randomly, the matrix identifies the endpoint, method, scenario, expected behavior, validation points, automation layer, and release impact.
 
 This helps demonstrate professional API test design across:
 
@@ -16,7 +16,7 @@ This helps demonstrate professional API test design across:
 - response-time threshold checks
 - security-aware validation
 - CI execution
-- evidence generation
+- results generation
 - release-readiness decision support
 
 ## Why an API Test Matrix Matters
@@ -32,7 +32,7 @@ A test matrix helps a QA engineer or SDET answer important questions before test
 - What security or sensitive-data concerns exist?
 - Which tests are automated?
 - Which tests run in CI?
-- What evidence supports the result?
+- What results support the outcome?
 - Would a failure block release?
 
 A professional API test effort should not only prove that endpoints return successful responses. It should also prove that invalid inputs, missing resources, unsupported behavior, and unsafe data exposure are handled correctly.
@@ -62,7 +62,7 @@ The SDET Reliability Framework uses the following principles for API test design
 7. **Include performance awareness**  
    Lightweight response-time thresholds can help identify obvious degradation.
 
-8. **Preserve evidence**  
+8. **Preserve validation results**  
    Tests should produce output that can be reviewed locally or in CI.
 
 9. **Connect test results to release readiness**  
@@ -87,3 +87,4 @@ The first planned endpoint is:
 
 ```text
 GET /patients/{patient_id}
+

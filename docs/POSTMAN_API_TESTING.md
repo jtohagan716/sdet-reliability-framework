@@ -125,13 +125,13 @@ This Postman layer validates that the backend REST API is:
 - returning expected response fields
 - returning expected HTTP status codes
 - handling invalid routes in a controlled way
-- capable of producing repeatable test evidence
+- capable of producing repeatable test results
 
 ## Release-Readiness Value
 
 Postman API testing adds another validation layer to the framework by confirming that backend REST endpoints are reachable, contract-visible, observable, and returning controlled responses.
 
-This supports release-readiness decisions by adding clear REST API evidence alongside Python tests, Playwright automation, Docker validation, Prometheus metrics, Grafana observability, GitHub Actions CI, and release reporting.
+This supports release-readiness decisions by adding clear REST API results alongside Python tests, Playwright automation, Docker validation, Prometheus metrics, Grafana observability, GitHub Actions CI, and release reporting.
 
 ### CI-Integrated Postman/Newman API Validation
 
@@ -146,7 +146,7 @@ The CI pipeline:
 - uploads the Newman report as a GitHub Actions artifact
 - continues into the Playwright automation suite
 
-This demonstrates repeatable backend API validation, CI-based quality gates, and downloadable test evidence.
+This demonstrates repeatable backend API validation, CI-based quality gates, and downloadable test results.
 
 ## Professional Relevance
 
@@ -163,9 +163,5 @@ It supports job requirements such as:
 - repeatable automated test execution
 - CI/CD-style test reporting
 
-## Interview Explanation
 
-I added a Postman API testing layer to my reliability framework to make REST backend validation more explicit. The collection validates the FastAPI service health endpoint, Prometheus metrics endpoint, OpenAPI contract availability, HTTP status codes, response fields, response-time thresholds, and negative endpoint behavior.
 
-The collection can be run manually in Postman or from the command line with Newman. It also produces a JUnit-style XML report, which makes the API tests more suitable for repeatable validation and CI/CD-style workflows.
-'@ | Set-Content docs/POSTMAN_API_TESTING.md

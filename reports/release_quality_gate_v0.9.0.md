@@ -18,8 +18,8 @@ Elapsed Seconds: `488.6`
 | Newman API regression | PASS | 0 | 17.12 |
 | Focused Section 508 accessibility smoke validation | PASS | 0 | 71.51 |
 | Full Playwright automation | PASS | 0 | 115.28 |
-| Performance baseline evidence | PASS | 0 | 28.84 |
-| Lightweight load test evidence | PASS | 0 | 3.04 |
+| Performance baseline results | PASS | 0 | 28.84 |
+| Lightweight load test results | PASS | 0 | 3.04 |
 | Local Docker/API smoke validation | PASS | 0 | 141.39 |
 
 ## Gate Details
@@ -104,7 +104,7 @@ Command:
 npx playwright test
 ~~~
 
-### Performance baseline evidence
+### Performance baseline results
 
 Status: `PASS`
 
@@ -114,7 +114,7 @@ Command:
 python .\scripts\run_performance_baseline.py --output reports/performance_baseline_quality_gate_v0.9.0.md
 ~~~
 
-### Lightweight load test evidence
+### Lightweight load test results
 
 Status: `PASS`
 
@@ -136,15 +136,15 @@ Command:
 
 ## Interpretation
 
-This report captures release-readiness evidence for the project.
+This report captures release-readiness results for the project.
 
 A passing quality gate means the selected automated checks completed successfully before release.
 
-The gate includes syntax checks, regression testing, Application Programming Interface (API) contract testing, user interface and API automation, accessibility smoke validation, performance baseline evidence, lightweight load testing, and Docker-based smoke validation.
+The gate includes syntax checks, regression testing, Application Programming Interface (API) contract testing, user interface and API automation, accessibility smoke validation, performance baseline results, lightweight load testing, and Docker-based smoke validation.
 
 ## International Software Testing Qualifications Board (ISTQB) / Certified Tester Foundation Level (CTFL) Connection
 
-This workflow represents release exit criteria and regression evidence. The software should not be considered ready for release unless the required checks pass.
+This workflow represents release exit criteria and regression results. The software should not move forward unless the required checks pass.
 
 ## Department of Homeland Security (DHS) / Section 508 Accessibility Connection
 
@@ -152,4 +152,6 @@ Accessibility smoke validation is included as part of release readiness. This do
 
 ## Reliability Value
 
-The release quality gate turns individual validation commands into a repeatable evidence workflow. It helps replace ad hoc release judgment with documented, repeatable checks.
+The release quality gate turns individual validation commands into a repeatable results workflow. It helps replace ad hoc release judgment with documented, repeatable checks.
+
+

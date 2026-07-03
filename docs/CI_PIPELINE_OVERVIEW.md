@@ -4,7 +4,7 @@
 
 This document explains the GitHub Actions CI pipeline used by the SDET Reliability Framework.
 
-The pipeline is designed to demonstrate automated validation across build, backend reliability, API testing, automation testing, observability, and release-readiness evidence.
+The pipeline is designed to demonstrate automated validation across build, backend reliability, API testing, automation testing, observability, and release-readiness results.
 
 The goal is not only to run tests, but to show how validation results can support a release decision.
 
@@ -94,7 +94,7 @@ This job validates the system through multiple modern testing layers:
 - negative endpoint behavior
 - Playwright automation
 - observability stack validation
-- downloadable test evidence
+- downloadable test results
 
 This demonstrates that API and automation tests can be run as part of a repeatable CI quality gate.
 
@@ -108,3 +108,4 @@ Artifact name:
 
 ```text
 postman-newman-results
+

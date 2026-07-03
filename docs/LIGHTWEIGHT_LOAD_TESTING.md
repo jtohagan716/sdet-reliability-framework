@@ -4,7 +4,7 @@
 
 This project includes a lightweight load testing script to exercise selected API endpoints using a controlled weighted traffic mix.
 
-The goal is not to perform a full enterprise-scale load test. The goal is to create repeatable local evidence about API behavior under small concurrent traffic.
+The goal is not to perform a full enterprise-scale load test. The goal is to create repeatable local results about API behavior under small concurrent traffic.
 
 This builds on the previous performance baseline work.
 
@@ -139,7 +139,7 @@ The correct response is not panic. The correct response is investigation.
 
 ## Reliability Value
 
-This load test provides release-readiness evidence.
+This load test provides release-readiness results.
 
 It helps answer:
 
@@ -158,6 +158,8 @@ Possible next steps:
 - Compare load test results against the baseline.
 - Add pass/fail thresholds for p95 and error rate.
 - Add a larger sustained load profile.
-- Add Grafana dashboard evidence during load.
+- Add Grafana dashboard results during load.
 - Add Kubernetes-based deployment validation.
 - Add CI quality-gate documentation for performance checks.
+
+
