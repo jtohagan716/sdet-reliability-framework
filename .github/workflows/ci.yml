@@ -156,6 +156,7 @@ jobs:
             tests/ui/observability_validation.spec.ts \
             tests/ui/prometheus_validation.spec.ts \
             tests/ui/patient_lookup_accessibility.spec.ts \
+            tests/ui/patient_lookup_axe_accessibility.spec.ts \
             --project=chromium \
             --reporter=line,junit
 
@@ -170,4 +171,5 @@ jobs:
       - name: Stop Docker Compose observability stack
         if: always()
         run: docker compose down
+
 

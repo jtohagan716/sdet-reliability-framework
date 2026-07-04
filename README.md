@@ -34,6 +34,7 @@ This project demonstrates:
 - performance baseline results
 - lightweight load testing
 - Section 508-oriented accessibility smoke validation
+- Accessibility scan validation
 - release quality gate results
 - versioned release documentation
 
@@ -52,6 +53,7 @@ This project demonstrates:
 | v1.0.0 | Reliability Software Development Engineer in Test (SDET) project baseline |
 | v1.1.0 | Continuous Integration (CI) quality gate expansion |
 | v1.2.0 | Application Programming Interface (API) contract validation |
+| v1.3.0 | Accessibility scan validation |
 
 ## Technology Stack
 
@@ -163,6 +165,7 @@ Key documentation includes:
 | docs/PROJECT_WALKTHROUGH.md | Reviewer-friendly explanation of the project |
 | docs/RELEASE_QUALITY_GATES.md | Release quality gate documentation |
 | docs/SECTION_508_ACCESSIBILITY.md | Section 508-oriented accessibility smoke validation |
+| docs/ACCESSIBILITY_SCAN_VALIDATION.md | Accessibility scan validation documentation |
 | docs/LIGHTWEIGHT_LOAD_TESTING.md | Lightweight load testing documentation |
 | docs/PERFORMANCE_BASELINE.md | Performance baseline documentation |
 | docs/METRICS_AND_PERFORMANCE_BASELINE.md | Metrics and baseline foundation |
@@ -209,6 +212,7 @@ Planned or possible future improvements include:
 - baseline comparison reports
 - stronger security testing documentation
 - Department of Homeland Security (DHS) Trusted Tester study alignment
+
 
 
 
