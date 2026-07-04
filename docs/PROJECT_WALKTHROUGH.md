@@ -146,6 +146,23 @@ Test file:
 
     tests/test_api_contract_validation.py
 
+
+### Accessibility Scan Validation
+
+Accessibility scan validation uses axe-core through Playwright to scan the rendered Patient Lookup page for automatically detectable accessibility violations.
+
+Purpose:
+
+- scan the rendered page with automated accessibility rules
+- supplement page-specific accessibility smoke checks
+- validate selected WCAG rule tags
+- keep accessibility validation in the automated test path
+- provide a repeatable check that can expand as more pages are added
+
+Test file:
+
+    tests/ui/patient_lookup_axe_accessibility.spec.ts
+
 ### Release Quality Gate
 
 The release quality gate runs major validation checks and generates results before release.
@@ -215,6 +232,7 @@ Possible future work includes:
 - baseline comparison reports
 - stronger security testing documentation
 - Department of Homeland Security (DHS) Trusted Tester study alignment
+
 
 
 

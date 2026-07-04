@@ -1,7 +1,7 @@
 {
   "name": "sdet-reliability-framework",
   "version": "1.0.0",
-  "description": "The SDET Reliability Framework is a Python-based engineering project focused on software reliability, performance intelligence, and evidence-based release decisions.",
+  "description": "The SDET Reliability Framework is a Python-based engineering project focused on software reliability, performance intelligence, and validation-focused release decisions.",
   "main": "index.js",
   "directories": {
     "test": "tests"
@@ -24,8 +24,10 @@
   },
   "homepage": "https://github.com/jtohagan716/sdet-reliability-framework#readme",
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.60.0",
     "@types/node": "^25.9.3",
     "newman": "^6.2.2"
   }
 }
+
