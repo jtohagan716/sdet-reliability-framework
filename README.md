@@ -23,6 +23,7 @@ The project supports the following professional direction:
 This project demonstrates:
 
 - Application Programming Interface (API) validation
+- API contract validation
 - automated regression testing
 - Postman/Newman API regression checks
 - Playwright browser and workflow automation
@@ -49,6 +50,8 @@ This project demonstrates:
 | v0.8.0 | Section 508-oriented accessibility smoke validation |
 | v0.9.0 | release quality gate results |
 | v1.0.0 | Reliability Software Development Engineer in Test (SDET) project baseline |
+| v1.1.0 | Continuous Integration (CI) quality gate expansion |
+| v1.2.0 | Application Programming Interface (API) contract validation |
 
 ## Technology Stack
 
@@ -206,6 +209,7 @@ Planned or possible future improvements include:
 - baseline comparison reports
 - stronger security testing documentation
 - Department of Homeland Security (DHS) Trusted Tester study alignment
+
 
 
 

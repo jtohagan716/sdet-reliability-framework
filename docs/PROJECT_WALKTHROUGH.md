@@ -129,6 +129,23 @@ Purpose:
 
 This does not claim full Section 508 certification. It is a smoke validation layer that can be expanded later.
 
+
+### API Contract Validation
+
+API contract validation checks that selected Application Programming Interface (API) responses keep the expected structure, required fields, data types, and error formats.
+
+Purpose:
+
+- validate stable response fields
+- validate expected data types
+- validate date and datetime formatting
+- validate expected error response structure
+- detect response-shape changes that status-code checks may miss
+
+Test file:
+
+    tests/test_api_contract_validation.py
+
 ### Release Quality Gate
 
 The release quality gate runs major validation checks and generates results before release.
@@ -198,6 +215,7 @@ Possible future work includes:
 - baseline comparison reports
 - stronger security testing documentation
 - Department of Homeland Security (DHS) Trusted Tester study alignment
+
 
 
 

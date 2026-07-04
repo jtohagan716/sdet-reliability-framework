@@ -67,7 +67,10 @@ jobs:
 
           throw "FastAPI service did not become ready"
 
-      - name: Run Python reliability and security test suite
+      - name: Run API contract validation tests
+        run: python -m pytest -q tests/test_api_contract_validation.py --junitxml=reports/api-contract-validation-results.xml
+
+      - name: Run Python reliability, security, and contract test suite
         run: python -m pytest -q --junitxml=reports/pytest-results.xml
 
       - name: Run performance CI gate
@@ -78,7 +81,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pytest-results
-          path: reports/pytest-results.xml
+          path: |
+            reports/pytest-results.xml
+            reports/api-contract-validation-results.xml
           if-no-files-found: warn
 
   api-and-ui-validation:
@@ -165,3 +170,4 @@ jobs:
       - name: Stop Docker Compose observability stack
         if: always()
         run: docker compose down
+
