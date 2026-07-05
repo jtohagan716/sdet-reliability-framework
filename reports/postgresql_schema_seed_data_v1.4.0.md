@@ -95,3 +95,20 @@ docker compose down -v
 docker compose up -d postgres
 
 This is destructive for the local database volume and should only be used for this project-scale synthetic database environment.
+
+## Repeatable Validation Script
+
+A PowerShell validation script was added:
+
+    scripts/validate_postgresql_schema.ps1
+
+The script validates:
+
+- the PostgreSQL container is running
+- the expected number of public tables exists
+- expected seed counts are present
+- the many-to-many encounter/diagnosis relationship returns the expected row count
+- left join behavior includes patients with and without encounters
+- a representative many-to-many join query runs successfully
+
+This provides a repeatable local validation check instead of relying only on manual SQL commands.
