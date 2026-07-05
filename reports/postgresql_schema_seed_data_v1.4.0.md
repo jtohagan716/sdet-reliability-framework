@@ -57,3 +57,41 @@ This milestone adds the database schema and seed data foundation. API routes are
 - Add database-backed patient lookup
 - Add EXPLAIN ANALYZE query plan comparison
 - Add index performance comparison
+
+## Docker Compose Validation
+
+PostgreSQL was added as a Docker Compose service using the official postgres:16 image.
+
+The service initializes the synthetic reliability database from SQL files mounted into:
+
+/docker-entrypoint-initdb.d
+
+Validated locally:
+
+- PostgreSQL container started successfully.
+- Database accepted connections.
+- Schema initialization completed.
+- Eight relational tables were created.
+- Synthetic seed data loaded successfully.
+
+Validated tables:
+
+- patients
+- facilities
+- providers
+- encounters
+- diagnoses
+- encounter_diagnoses
+- lab_orders
+- lab_results
+
+## Important Initialization Note
+
+PostgreSQL initialization scripts in docker-entrypoint-initdb.d run only when the database volume is first created.
+
+If schema or seed files are changed later during local development, the local PostgreSQL volume may need to be recreated with:
+
+docker compose down -v
+docker compose up -d postgres
+
+This is destructive for the local database volume and should only be used for this project-scale synthetic database environment.
