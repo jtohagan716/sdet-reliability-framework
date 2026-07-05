@@ -1,6 +1,6 @@
-# SDET Reliability Framework
+﻿# SDET Reliability Framework
 
-A reliability-focused Software Development Engineer in Test (SDET) project demonstrating modern software quality, Application Programming Interface (API) validation, observability, performance results, accessibility smoke validation, and release-readiness practices.
+A reliability-focused Software Development Engineer in Test (SDET) project demonstrating modern software quality, Application Programming Interface (API) validation, observability, performance results, accessibility smoke validation, PostgreSQL schema validation, and release-readiness practices.
 
 ## Project Purpose
 
@@ -54,6 +54,7 @@ This project demonstrates:
 | v1.1.0 | Continuous Integration (CI) quality gate expansion |
 | v1.2.0 | Application Programming Interface (API) contract validation |
 | v1.3.0 | Accessibility scan validation |
+| v1.4.0 | PostgreSQL schema and synthetic seed data validation |
 
 ## Technology Stack
 
@@ -135,6 +136,16 @@ Run:
 
     python .\scripts\run_lightweight_load_test.py
 
+### PostgreSQL Schema Validation
+
+The PostgreSQL schema validation script checks that the local database container is running, expected relational tables exist, deterministic seed data is loaded, and representative join behavior returns expected results.
+
+Run:
+
+    .\scripts\validate_postgresql_schema.ps1
+
+This validation supports future API/database consistency checks, SQL join validation, and query plan performance comparison.
+
 ### Release Quality Gate
 
 The release quality gate script runs the major validation checks and generates release-readiness results.
@@ -155,6 +166,7 @@ Key generated reports include:
 | reports/release_quality_gate_v0.9.0.md | release quality gate results |
 | reports/performance_baseline_quality_gate_v0.9.0.md | Quality-gate-specific performance baseline results |
 | reports/lightweight_load_test_quality_gate_v0.9.0.md | Quality-gate-specific lightweight load test results |
+| reports/postgresql_schema_seed_data_v1.4.0.md | PostgreSQL schema and seed data validation results |
 
 ## Documentation
 
@@ -166,6 +178,7 @@ Key documentation includes:
 | docs/RELEASE_QUALITY_GATES.md | Release quality gate documentation |
 | docs/SECTION_508_ACCESSIBILITY.md | Section 508-oriented accessibility smoke validation |
 | docs/ACCESSIBILITY_SCAN_VALIDATION.md | Accessibility scan validation documentation |
+| docs/POSTGRESQL_SCHEMA.md | PostgreSQL schema and seed data documentation |
 | docs/LIGHTWEIGHT_LOAD_TESTING.md | Lightweight load testing documentation |
 | docs/PERFORMANCE_BASELINE.md | Performance baseline documentation |
 | docs/METRICS_AND_PERFORMANCE_BASELINE.md | Metrics and baseline foundation |
@@ -212,6 +225,7 @@ Planned or possible future improvements include:
 - baseline comparison reports
 - stronger security testing documentation
 - Department of Homeland Security (DHS) Trusted Tester study alignment
+
 
 
 

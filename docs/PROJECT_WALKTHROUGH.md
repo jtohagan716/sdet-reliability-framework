@@ -1,10 +1,10 @@
-# Project Walkthrough
+﻿# Project Walkthrough
 
 ## Project Purpose
 
 This project is a reliability-focused Software Development Engineer in Test (SDET) project.
 
-The goal is not to build a complex business application. The goal is to demonstrate modern software quality practices around Application Programming Interface (API) validation, automated regression testing, Docker-based local runtime validation, diagnostic logging, request tracing, Prometheus metrics, performance results, lightweight load testing, Section 508-oriented accessibility smoke validation, and release quality gates.
+The goal is not to build a complex business application. The goal is to demonstrate modern software quality practices around Application Programming Interface (API) validation, automated regression testing, Docker-based local runtime validation, diagnostic logging, request tracing, Prometheus metrics, performance results, lightweight load testing, PostgreSQL schema validation, Section 508-oriented accessibility smoke validation, and release quality gates.
 
 ## Professional Framing
 
@@ -37,6 +37,11 @@ The project demonstrates the ability to:
 | v0.7.0 | Lightweight load testing |
 | v0.8.0 | Section 508-oriented accessibility smoke validation |
 | v0.9.0 | release quality gate results |
+| v1.0.0 | Reliability Software Development Engineer in Test (SDET) project baseline |
+| v1.1.0 | Continuous Integration (CI) quality gate expansion |
+| v1.2.0 | Application Programming Interface (API) contract validation |
+| v1.3.0 | Accessibility scan validation |
+| v1.4.0 | PostgreSQL schema and synthetic seed data validation |
 
 ## Main Validation Layers
 
@@ -163,6 +168,31 @@ Test file:
 
     tests/ui/patient_lookup_axe_accessibility.spec.ts
 
+### PostgreSQL Schema Validation
+
+PostgreSQL schema validation checks that the local database foundation is repeatable, relationally valid, and ready to support future API/database consistency testing.
+
+Purpose:
+
+- validate the PostgreSQL container is running
+- confirm the expected database tables exist
+- confirm deterministic synthetic seed data loaded correctly
+- validate many-to-many join behavior through the encounter_diagnoses bridge table
+- validate left join behavior for patients with and without encounters
+- support future query plan and index performance comparison
+
+Validation script:
+
+    scripts/validate_postgresql_schema.ps1
+
+Documentation:
+
+    docs/POSTGRESQL_SCHEMA.md
+
+Report:
+
+    reports/postgresql_schema_seed_data_v1.4.0.md
+
 ### Release Quality Gate
 
 The release quality gate runs major validation checks and generates results before release.
@@ -232,6 +262,7 @@ Possible future work includes:
 - baseline comparison reports
 - stronger security testing documentation
 - Department of Homeland Security (DHS) Trusted Tester study alignment
+
 
 
 
