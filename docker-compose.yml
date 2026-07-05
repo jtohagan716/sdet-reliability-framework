@@ -7,6 +7,12 @@
     container_name: sdet-reliability-api
     ports:
       - "8000:8000"
+    environment:
+      PATIENT_DATA_SOURCE: postgres
+      DATABASE_URL: postgresql://sdet_user:sdet_password@postgres:5432/sdet_reliability
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
       interval: 10s
