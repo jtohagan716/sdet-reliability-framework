@@ -1,4 +1,4 @@
-name: SDET Reliability Framework CI
+﻿name: SDET Reliability Framework CI
 
 on:
   push:
@@ -98,7 +98,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Start Docker Compose observability stack
+      - name: Start Docker Compose validation stack
         run: |
           docker compose up -d --build
           sleep 5
@@ -117,6 +117,33 @@ jobs:
           docker logs sdet-reliability-api || true
           exit 1
 
+      - name: Run PostgreSQL schema validation
+        shell: pwsh
+        run: |
+          for ($i = 1; $i -le 30; $i++) {
+            docker exec sdet-postgres pg_isready -U sdet_user -d sdet_reliability
+
+            if ($LASTEXITCODE -eq 0) {
+              Write-Host "PostgreSQL service is ready"
+              break
+            }
+
+            if ($i -eq 30) {
+              try {
+                docker logs sdet-postgres
+              }
+              catch {
+                Write-Host "Unable to read PostgreSQL logs"
+              }
+
+              throw "PostgreSQL service did not become ready"
+            }
+
+            Write-Host "Waiting for PostgreSQL service... attempt $i"
+            Start-Sleep -Seconds 2
+          }
+
+          ./scripts/validate_postgresql_schema.ps1
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -168,8 +195,9 @@ jobs:
           path: reports/playwright-results.xml
           if-no-files-found: warn
 
-      - name: Stop Docker Compose observability stack
+      - name: Stop Docker Compose validation stack
         if: always()
         run: docker compose down
+
 
 

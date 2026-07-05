@@ -1,4 +1,4 @@
-services:
+﻿services:
   api:
     build:
       context: .
@@ -12,6 +12,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 10s
+
+  postgres:
+    image: postgres:16
+    container_name: sdet-postgres
+    environment:
+      POSTGRES_DB: sdet_reliability
+      POSTGRES_USER: sdet_user
+      POSTGRES_PASSWORD: sdet_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database/init:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sdet_user -d sdet_reliability"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
       start_period: 10s
 
   prometheus:
@@ -31,3 +50,6 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
+
+volumes:
+  postgres_data:
