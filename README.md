@@ -57,6 +57,7 @@ This project demonstrates:
 | v1.4.0 | PostgreSQL schema and synthetic seed data validation |
 | v1.5.0 | PostgreSQL-backed patient lookup validation |
 | v1.6.0 | API-to-database consistency validation |
+| v1.7.0 | PostgreSQL query plan and index validation |
 
 ## Technology Stack
 
@@ -171,6 +172,8 @@ Key generated reports include:
 | reports/postgresql_schema_seed_data_v1.4.0.md | PostgreSQL schema and seed data validation results |
 | reports/postgresql_backed_patient_lookup_v1.5.0.md | PostgreSQL-backed patient lookup validation results |
 | reports/api_database_consistency_validation_v1.6.0.md | API-to-database consistency validation results |
+| reports/postgresql_query_plan_index_validation_v1.7.0.md | PostgreSQL query plan and index validation results |
+| reports/postgresql_query_plan_index_comparison_v1.7.0.md | PostgreSQL query plan index comparison results |
 
 
 ## Documentation

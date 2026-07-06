@@ -44,6 +44,7 @@ The project demonstrates the ability to:
 | v1.4.0 | PostgreSQL schema and synthetic seed data validation |
 | v1.5.0 | PostgreSQL-backed patient lookup validation |
 | v1.6.0 | API-to-database consistency validation |
+| v1.7.0 | PostgreSQL query plan and index validation |
 
 ## Main Validation Layers
 
