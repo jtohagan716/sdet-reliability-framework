@@ -1,4 +1,4 @@
-﻿name: SDET Reliability Framework CI
+name: SDET Reliability Framework CI
 
 on:
   push:
@@ -144,6 +144,12 @@ jobs:
           }
 
           ./scripts/validate_postgresql_schema.ps1
+
+      - name: Run PostgreSQL-backed patient lookup validation
+        shell: pwsh
+        run: |
+          ./scripts/validate_postgresql_patient_lookup.ps1
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -198,6 +204,8 @@ jobs:
       - name: Stop Docker Compose validation stack
         if: always()
         run: docker compose down
+
+
 
 
 

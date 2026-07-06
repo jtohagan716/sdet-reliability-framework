@@ -55,6 +55,7 @@ This project demonstrates:
 | v1.2.0 | Application Programming Interface (API) contract validation |
 | v1.3.0 | Accessibility scan validation |
 | v1.4.0 | PostgreSQL schema and synthetic seed data validation |
+| v1.5.0 | PostgreSQL-backed patient lookup validation |
 
 ## Technology Stack
 
@@ -167,6 +168,8 @@ Key generated reports include:
 | reports/performance_baseline_quality_gate_v0.9.0.md | Quality-gate-specific performance baseline results |
 | reports/lightweight_load_test_quality_gate_v0.9.0.md | Quality-gate-specific lightweight load test results |
 | reports/postgresql_schema_seed_data_v1.4.0.md | PostgreSQL schema and seed data validation results |
+| reports/postgresql_backed_patient_lookup_v1.5.0.md | PostgreSQL-backed patient lookup validation results |
+
 
 ## Documentation
 

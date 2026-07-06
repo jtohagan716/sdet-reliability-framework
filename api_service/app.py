@@ -12,6 +12,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from framework.security.jwt_decoder import decode_jwt
 from framework.security.jwt_inspector import inspect_jwt
+from api_service.repositories.patients import get_patient_summary_from_postgres
 
 
 TRUSTED_ISSUER = "https://company-login.com"
@@ -28,6 +29,8 @@ HTTP_REQUEST_DURATION_SECONDS = Histogram(
     "HTTP request duration in seconds by method, path, and status code",
     ["method", "path", "status_code"],
 )
+
+PATIENT_DATA_SOURCE = os.getenv("PATIENT_DATA_SOURCE", "memory").lower()
 
 PATIENT_LOOKUP_TOTAL = Counter(
     "sdet_patient_lookup_total",
@@ -357,12 +360,31 @@ def get_patient_summary(
     production records, credentials, secrets, or real patient information.
     """
     logger.info(
-        "patient_lookup_started request_id=%s patient_id=%s",
+        "patient_lookup_started request_id=%s patient_id=%s data_source=%s",
         request_id,
         patient_id,
+        PATIENT_DATA_SOURCE,
     )
 
-    patient = SYNTHETIC_PATIENTS.get(patient_id)
+    try:
+        if PATIENT_DATA_SOURCE == "postgres":
+            patient = get_patient_summary_from_postgres(patient_id)
+        else:
+            patient = SYNTHETIC_PATIENTS.get(patient_id)
+    except Exception:
+        PATIENT_LOOKUP_TOTAL.labels(outcome="data_source_error").inc()
+
+        logger.exception(
+            "patient_lookup_data_source_error request_id=%s patient_id=%s data_source=%s",
+            request_id,
+            patient_id,
+            PATIENT_DATA_SOURCE,
+        )
+
+        raise HTTPException(
+            status_code=503,
+            detail="PATIENT_DATA_SOURCE_UNAVAILABLE",
+        )
 
     if patient is None:
         PATIENT_LOOKUP_TOTAL.labels(outcome="not_found").inc()
