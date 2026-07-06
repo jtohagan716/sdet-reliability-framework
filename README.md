@@ -56,6 +56,7 @@ This project demonstrates:
 | v1.3.0 | Accessibility scan validation |
 | v1.4.0 | PostgreSQL schema and synthetic seed data validation |
 | v1.5.0 | PostgreSQL-backed patient lookup validation |
+| v1.6.0 | API-to-database consistency validation |
 
 ## Technology Stack
 
@@ -169,6 +170,7 @@ Key generated reports include:
 | reports/lightweight_load_test_quality_gate_v0.9.0.md | Quality-gate-specific lightweight load test results |
 | reports/postgresql_schema_seed_data_v1.4.0.md | PostgreSQL schema and seed data validation results |
 | reports/postgresql_backed_patient_lookup_v1.5.0.md | PostgreSQL-backed patient lookup validation results |
+| reports/api_database_consistency_validation_v1.6.0.md | API-to-database consistency validation results |
 
 
 ## Documentation
