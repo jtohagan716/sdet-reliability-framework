@@ -3,8 +3,16 @@
 from api_service.database import get_connection
 
 
-def get_patient_summary_from_postgres(patient_id: int) -> dict[str, Any] | None:
-    query = """
+def get_patient_summary_from_postgres(
+    patient_id: int,
+    defect_mode: str = "none",
+) -> dict[str, Any] | None:
+    if defect_mode == "include_scheduled_last_visit":
+        encounter_status_filter = ""
+    else:
+        encounter_status_filter = "AND e.status = 'completed'"
+
+    query = f"""
         SELECT
             p.patient_id,
             p.first_name || ' ' || p.last_name AS name,
@@ -13,7 +21,7 @@ def get_patient_summary_from_postgres(patient_id: int) -> dict[str, Any] | None:
         FROM patients p
         LEFT JOIN encounters e
             ON p.patient_id = e.patient_id
-           AND e.status = 'completed'
+           {encounter_status_filter}
         WHERE p.patient_id = %s
         GROUP BY
             p.patient_id,

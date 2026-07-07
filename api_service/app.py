@@ -31,6 +31,7 @@ HTTP_REQUEST_DURATION_SECONDS = Histogram(
 )
 
 PATIENT_DATA_SOURCE = os.getenv("PATIENT_DATA_SOURCE", "memory").lower()
+PATIENT_LOOKUP_DEFECT_MODE = os.getenv("PATIENT_LOOKUP_DEFECT_MODE", "none").lower()
 
 PATIENT_LOOKUP_TOTAL = Counter(
     "sdet_patient_lookup_total",
@@ -360,15 +361,19 @@ def get_patient_summary(
     production records, credentials, secrets, or real patient information.
     """
     logger.info(
-        "patient_lookup_started request_id=%s patient_id=%s data_source=%s",
+        "patient_lookup_started request_id=%s patient_id=%s data_source=%s defect_mode=%s",
         request_id,
         patient_id,
         PATIENT_DATA_SOURCE,
+        PATIENT_LOOKUP_DEFECT_MODE,
     )
 
     try:
         if PATIENT_DATA_SOURCE == "postgres":
-            patient = get_patient_summary_from_postgres(patient_id)
+            patient = get_patient_summary_from_postgres(
+                patient_id,
+                defect_mode=PATIENT_LOOKUP_DEFECT_MODE,
+            )
         else:
             patient = SYNTHETIC_PATIENTS.get(patient_id)
     except Exception:

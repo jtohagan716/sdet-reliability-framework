@@ -58,6 +58,7 @@ This project demonstrates:
 | v1.5.0 | PostgreSQL-backed patient lookup validation |
 | v1.6.0 | API-to-database consistency validation |
 | v1.7.0 | PostgreSQL query plan and index validation |
+| v1.8.0 | Controlled defect detection validation |
 
 ## Technology Stack
 
@@ -173,6 +174,7 @@ Key generated reports include:
 | reports/postgresql_backed_patient_lookup_v1.5.0.md | PostgreSQL-backed patient lookup validation results |
 | reports/api_database_consistency_validation_v1.6.0.md | API-to-database consistency validation results |
 | reports/postgresql_query_plan_index_validation_v1.7.0.md | PostgreSQL query plan and index validation results |
+| reports/controlled_defect_detection_v1.8.0.md | Controlled defect detection validation results |
 | reports/postgresql_query_plan_index_comparison_v1.7.0.md | PostgreSQL query plan index comparison results |
 
 
