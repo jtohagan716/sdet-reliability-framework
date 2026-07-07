@@ -2,42 +2,38 @@
 
 ## Purpose
 
-This document describes the dependency cleanup and security quality gate work added for the SDET Reliability Framework.
+This document describes the dependency cleanup and dependency security quality gate for the SDET Reliability Framework.
 
-The goal is to make project dependencies intentional, auditable, and easier to maintain.
+The goal is to make dependency risk visible, repeatable, and reviewable as part of release validation.
 
-This milestone focuses on practical release hygiene:
+This quality gate focuses on practical release hygiene:
 
-- remove unused dependencies
-- remove unused code that requires unnecessary packages
-- validate Python dependency health
+- maintain an intentional dependency list
+- remove unused packages and unused code
+- validate Python package dependency health
 - audit Python dependencies for known vulnerabilities
-- classify Node audit findings
-- avoid unsafe automatic dependency changes
-- document known risks and release decisions
+- separate runtime dependency checks from development/test-tooling checks
+- avoid unsafe forced dependency changes
+- document known transitive dependency findings
+- preserve a repeatable operational validation path
 
-## Why This Matters
+## Operational Context
 
-Dependency management is part of release quality.
+Dependency validation is part of release quality.
 
-A project can have passing tests but still carry unnecessary risk if it includes unused packages, stale dependencies, vulnerable transitive packages, or unclear remediation decisions.
+A project can have passing functional tests while still carrying unnecessary risk through unused dependencies, stale packages, vulnerable transitive packages, or unclear remediation decisions.
 
-This quality gate is intended to make dependency risk visible and manageable.
+This quality gate is designed to show how a release process can classify and manage dependency findings instead of treating every audit result as either ignored or automatically force-fixed.
 
-## Dependency Cleanup
+## Dependency Cleanup Completed
 
-The prior `requirements.txt` appeared to include packages from a broad environment freeze rather than only project-required packages.
+The prior Python dependency file contained packages that were not required by the active project.
 
-Examples of removed packages included unrelated or unused dependencies such as:
+Examples of removed packages included:
 
 - `openai`
 - `web3`
-- `eth-account`
-- `eth-utils`
-- `eth-keys`
-- `eth-abi`
-- `py_clob_client`
-- `py_order_utils`
+- Ethereum-related packages
 - `aiohttp`
 - `numpy`
 - `pandas`
@@ -48,89 +44,108 @@ The Node Playwright tooling remains in `package.json`, where it belongs.
 
 ## Removed Unused Script
 
-The file below was removed:
+The following file was removed:
 
     scripts/performance_dashboard.py
 
 That script was the only project-level source reference requiring `pandas` and `matplotlib`.
 
-Because it was not referenced by the active project workflow, documentation, or validation stack, removing it allowed the Python dependency list to be simplified.
+Because the script was not part of the active validation workflow, removing it allowed the Python dependency list to be simplified.
 
-## Current Python Dependency List
+## Current Python Dependency Scope
 
-The cleaned Python dependency list is intentionally small:
+The cleaned Python dependency list supports:
 
-    fastapi
-    uvicorn
-    prometheus_client
-    pydantic
-    pytest
-    requests
-    PyYAML
-    psycopg
-    psycopg-binary
+- FastAPI application runtime
+- Uvicorn server execution
+- Prometheus metrics
+- Pydantic models
+- Pytest validation
+- Requests-based API validation
+- PostgreSQL access through Psycopg
+- YAML handling
 
-These dependencies support the current FastAPI service, PostgreSQL access, Prometheus metrics, Pytest validation, YAML handling, and REST/API test support.
+## Dependency Security Validation Script
 
-## Python Dependency Validation
+The dependency security quality gate is implemented in:
 
-The Python dependency validation includes:
+    scripts/validate_dependency_security.ps1
+
+Run it with:
+
+    powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_dependency_security.ps1
+
+The script performs blocking checks and an advisory check.
+
+## Blocking Checks
+
+Blocking checks fail the script if they do not pass.
+
+### Python Package Dependency Health
+
+Command:
 
     python -m pip check
 
-This verifies that installed Python packages do not have broken dependency relationships.
+Purpose:
 
-Current result:
+    Verifies that installed Python packages do not have broken dependency relationships.
+
+Expected result:
 
     No broken requirements found.
 
-## Python Vulnerability Audit
+### Python Vulnerability Audit
 
-The Python dependency vulnerability audit uses:
+Command:
 
     python -m pip_audit -r .\requirements.txt
 
-An initial audit found one vulnerability:
+Purpose:
 
-| Package | Version | Finding | Fix Version |
-|---|---:|---|---:|
-| pytest | 9.0.2 | CVE-2025-71176 | 9.0.3 |
+    Audits Python dependencies listed in requirements.txt for known vulnerabilities.
 
-The project updated `pytest` to `9.0.3`.
-
-Current Python audit result:
+Expected result:
 
     No known vulnerabilities found.
 
-## Python Regression Validation
+### Node Production/Runtime Dependency Audit
 
-After the dependency cleanup and `pytest` update, the full Python regression suite was run:
+Command:
 
-    python -m pytest
+    npm audit --omit=dev --audit-level=high
 
-Current result:
+Purpose:
 
-    206 passed, 1 warning
+    Checks production/runtime Node dependencies while excluding development dependencies.
 
-The warning is a Starlette/FastAPI test client deprecation warning. It does not fail the current validation run.
+Expected result:
 
-A Windows temp-directory cleanup message also appeared after the run. The test session itself completed successfully.
+    No blocking production/runtime high-severity audit findings.
 
-## Node Dependency Audit Classification
+## Advisory Check
 
-The project also uses Node-based development and test tooling:
+The full Node audit is intentionally advisory.
 
-- Newman
-- Playwright
-- axe-core for Playwright
-
-The full Node audit command is:
+Command:
 
     npm audit --audit-level=high
 
+Purpose:
+
+    Reviews development and test tooling dependency findings.
+
+Current classification:
+
+    Known transitive development/test-tooling findings through the Newman/Postman dependency chain.
+
+The script does not fail on this advisory check. Instead, it reports that advisory findings are present and instructs the user to review whether a safe remediation path exists.
+
+## Current Newman/Postman Audit Finding
+
 The current full Node audit reports vulnerabilities through the Newman/Postman dependency chain.
 
-The affected chain includes packages such as:
+The affected dependency chain includes packages such as:
 
 - `newman`
 - `postman-runtime`
@@ -144,71 +159,62 @@ The affected chain includes packages such as:
 - `qs`
 - `underscore`
 
-The audit output indicates that `npm audit fix --force` would install `newman@2.1.2`, which is a breaking change.
+The audit output indicates that `npm audit fix --force` would install:
 
-That forced fix is not applied.
+    newman@2.1.2
+
+That is a breaking downgrade.
+
+The forced fix is not applied.
 
 ## Release Decision
 
-The Node audit findings are classified as known transitive development/test-tooling findings.
+The current release decision is:
 
-They are documented and monitored, but not automatically force-fixed because the proposed remediation would downgrade Newman in a breaking way.
+- Python dependency health passes.
+- Python vulnerability audit passes after updating `pytest`.
+- Production/runtime Node audit is treated as blocking.
+- Full Node development/test-tooling audit is treated as advisory.
+- Newman/Postman transitive findings are documented.
+- `npm audit fix --force` is not used because it would apply a breaking Newman downgrade.
 
-This is a deliberate release-quality decision.
+This is an intentional release-quality decision.
 
-The project does not ignore the findings. It classifies them as:
+The project does not ignore the Node findings. It classifies them as:
 
-    known transitive dev-tooling risk with no safe automatic fix currently applied
-
-## Blocking vs Advisory Checks
-
-The dependency quality gate separates blocking checks from advisory checks.
-
-### Blocking Checks
-
-These should pass for the release:
-
-    python -m pip check
-    python -m pip_audit -r .\requirements.txt
-    python -m pytest
-
-### Advisory Checks
-
-These are reviewed and documented:
-
-    npm audit --audit-level=high
-
-The full Node audit currently reports Newman/Postman transitive dependency findings. These findings require monitoring and future remediation when a safe dependency path is available.
+    known transitive development/test-tooling risk with no safe automatic remediation currently applied
 
 ## Operational Lesson
 
-A real release process should not blindly apply automated dependency fixes.
+A real dependency security review should not blindly apply automated fixes.
 
-The correct process is:
+A responsible process should:
 
-1. Run dependency health checks.
-2. Run vulnerability audits.
-3. Fix safe direct dependency findings.
-4. Identify whether findings are direct or transitive.
-5. Identify whether affected packages are runtime dependencies or development/test tooling.
+1. Identify the finding.
+2. Determine whether it is direct or transitive.
+3. Determine whether it affects runtime code or development/test tooling.
+4. Determine whether a safe fix exists.
+5. Apply safe direct fixes.
 6. Avoid breaking forced fixes without impact analysis.
-7. Document known risks.
-8. Make a release decision based on severity, exposure, usage, and remediation safety.
+7. Document known findings.
+8. Re-run validation after dependency changes.
+9. Preserve a clear release decision trail.
 
 ## Current Scope
 
-This project is a local and Continuous Integration validation framework using synthetic data.
+This project is a practice-scale reliability validation framework using synthetic data.
 
-The dependency security quality gate demonstrates practical release hygiene. It is not a full enterprise software supply-chain security program.
+This quality gate demonstrates dependency hygiene, audit classification, and release decision discipline.
+
+It is not a full enterprise software supply-chain security program.
 
 ## Future Improvements
 
 Possible future improvements include:
 
-- add a dedicated dependency security validation script
-- add `pip-audit` to GitHub Actions
-- add Node production/runtime audit checks
-- evaluate alternatives to Newman if transitive audit findings remain unresolved
-- add Software Bill of Materials generation
+- add the dependency security validation script to GitHub Actions
+- evaluate alternatives to Newman if transitive findings remain unresolved
 - add Dependabot configuration
-- document accepted-risk review dates
+- generate a Software Bill of Materials
+- add documented review dates for accepted advisory findings
+- separate runtime, CI, and local-development dependency policies
