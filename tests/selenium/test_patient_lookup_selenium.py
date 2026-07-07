@@ -1,4 +1,4 @@
-"""
+﻿"""
 Selenium WebDriver smoke validation for the synthetic Patient Lookup page.
 
 This test module intentionally parallels the existing Playwright accessibility
@@ -12,11 +12,22 @@ Selenium WebDriver.
 Playwright emphasizes role-based and label-based locators.
 Selenium emphasizes lower-level DOM locators, explicit waits, keyboard actions,
 and direct element inspection.
+
+Selenium is intentionally optional. If Selenium is not installed, this module
+is skipped during the default Pytest run. To run these tests locally, install:
+
+    python -m pip install -r requirements-selenium.txt
 """
 
 import os
 
 import pytest
+
+pytest.importorskip(
+    "selenium",
+    reason="Selenium is optional. Install requirements-selenium.txt to run Selenium comparison tests.",
+)
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
