@@ -1,275 +1,345 @@
 ﻿# Project Walkthrough
 
+## Overview
+
+The SDET Reliability Framework is a practice-scale reliability validation project.
+
+It demonstrates how a small service can be validated through automated tests, API checks, browser automation, accessibility smoke validation, PostgreSQL-backed data validation, performance baselines, lightweight load testing, dependency security review, and a repeatable release quality gate.
+
+The project is intentionally synthetic.
+
+It does not use real patient data, protected health information, personally identifiable information, credentials, secrets, or production data.
+
 ## Project Purpose
 
-This project is a reliability-focused Software Development Engineer in Test (SDET) project.
+The purpose of this project is to demonstrate practical quality engineering and reliability validation behavior.
 
-The goal is not to build a complex business application. The goal is to demonstrate modern software quality practices around Application Programming Interface (API) validation, automated regression testing, Docker-based local runtime validation, diagnostic logging, request tracing, Prometheus metrics, performance results, lightweight load testing, PostgreSQL schema validation, Section 508-oriented accessibility smoke validation, and release quality gates.
+The framework focuses on questions that matter in real release work:
 
-## Professional Framing
+- Does the API return the expected contract?
+- Does the system behave correctly for known success, not-found, and invalid-input paths?
+- Are logs and request identifiers available for troubleshooting?
+- Are metrics exposed for observability?
+- Does the system have a known performance baseline?
+- Can the system handle a lightweight weighted traffic mix?
+- Are basic accessibility checks part of release readiness?
+- Is PostgreSQL schema and seed data behavior deterministic?
+- Does the API agree with direct database query results?
+- Do database indexes support expected query behavior?
+- Can validation detect a controlled business-rule defect?
+- Are dependencies intentional and auditable?
+- Are release checks repeatable instead of ad hoc?
 
-This project is designed to show how an experienced production systems professional can modernize into reliability-focused Quality Assurance (QA), Software Development Engineer in Test (SDET), performance testing, and application reliability work.
+## Architecture Summary
 
-The project demonstrates the ability to:
+The project uses a small FastAPI service with synthetic patient lookup behavior.
 
-- validate Application Programming Interface (API) behavior
-- automate regression checks
-- run a local Docker-based system
-- collect diagnostic logging
-- trace requests with request identifiers
-- expose Prometheus metrics
-- avoid high-cardinality metric labels
-- generate performance baseline results
-- run lightweight load testing
-- include Section 508-oriented accessibility smoke validation
-- organize checks into a repeatable release quality gate
-- document release-readiness results
+The service can run with in-memory data or PostgreSQL-backed data depending on configuration.
+
+Docker Compose provides a local validation stack that includes:
+
+- FastAPI API service
+- PostgreSQL database
+- Prometheus
+- Grafana
+
+The validation layer includes:
+
+- Pytest
+- Postman/Newman
+- Playwright
+- axe-core for Playwright
+- PowerShell validation scripts
+- Python performance and load scripts
+- Markdown release reports
+
+## Core Application Endpoints
+
+| Endpoint | Purpose |
+|---|---|
+| `/health` | Basic API health check |
+| `/patients/1001` | Synthetic successful patient lookup |
+| `/patients/1002` | Synthetic secondary patient lookup |
+| `/patients/1003` | Additional synthetic patient lookup |
+| `/patients/1004` | Synthetic patient used for database consistency and defect validation |
+| `/patients/9999` | Expected not-found lookup |
+| `/patients/abc` | Expected invalid-input response |
+| `/metrics` | Prometheus metrics endpoint |
+| `/patient-lookup` | Simple browser-facing page for accessibility validation |
+
+## Synthetic Data Design
+
+The project uses deterministic synthetic patient data.
+
+Patient `1004` is especially important for database consistency validation.
+
+The expected business rule is:
+
+    last_visit should come from completed encounters only.
+
+Patient `1004` includes both a completed encounter and a future scheduled encounter.
+
+That makes the patient useful for validating whether the API correctly excludes scheduled encounters from the `last_visit` calculation.
+
+## Validation Layers
+
+### Pytest Regression Suite
+
+Pytest validates backend behavior, helper functions, contract expectations, workflow logic, security helper behavior, and script behavior.
+
+Run:
+
+    python -m pytest
+
+The current suite includes API, baseline, FHIR-oriented, payload, regression, performance, security, and workflow tests.
+
+### Postman/Newman API Regression
+
+Newman runs the Postman collection from the command line.
+
+Run:
+
+    npm run postman:test
+
+This validates API behavior outside of Pytest and provides an additional command-line regression layer.
+
+### Playwright Automation
+
+Playwright validates browser-facing behavior and accessibility-oriented checks.
+
+Run:
+
+    npx playwright test
+
+The project includes focused accessibility smoke validation and axe-core accessibility scan validation.
+
+### Local Smoke Validation
+
+The local smoke validation script checks Docker stack behavior, API health, synthetic patient behavior, Pytest, and Newman together.
+
+Run:
+
+    .\scripts\local_smoke_validation.ps1
+
+This provides a practical local confidence check before release work.
+
+### Performance Baseline
+
+The performance baseline script captures local response-time and error-rate results for selected endpoints.
+
+Run:
+
+    python .\scripts\run_performance_baseline.py
+
+The baseline provides a point of comparison for future changes.
+
+### Lightweight Load Testing
+
+The lightweight load test runs a weighted traffic mix with concurrency.
+
+Run:
+
+    python .\scripts\run_lightweight_load_test.py
+
+The load test captures metrics such as throughput, average response time, p95, p99, and scenario-level outcomes.
+
+### PostgreSQL Schema Validation
+
+The PostgreSQL schema validation script confirms that the expected database structure and deterministic seed data are present.
+
+Run:
+
+    .\scripts\validate_postgresql_schema.ps1
+
+This validates the relational foundation used by later API/database checks.
+
+### PostgreSQL-Backed Patient Lookup Validation
+
+The PostgreSQL-backed patient lookup validation confirms that the API can retrieve patient summary data from PostgreSQL while preserving the external API response contract.
+
+Run:
+
+    .\scripts\validate_postgresql_patient_lookup.ps1
+
+### API-to-Database Consistency Validation
+
+The API-to-database consistency validation compares API responses against direct PostgreSQL query results.
+
+Run:
+
+    .\scripts\validate_api_database_consistency.ps1
+
+This validates that the API and database agree on key patient summary fields.
+
+### PostgreSQL Query Plan and Index Validation
+
+The query plan and index validation confirms that expected indexes exist and that PostgreSQL query plan evidence can be captured.
+
+Run:
+
+    .\scripts\validate_patient_lookup_query_plan.ps1
+
+This supports backend reliability by making database access behavior visible.
+
+### Controlled Defect Detection Validation
+
+The controlled defect detection validation intentionally enables a known defect mode.
+
+Run:
+
+    .\scripts\validate_controlled_defect_detection.ps1
+
+The script validates that the consistency checks catch the defect, then restores normal behavior.
+
+This is useful because a validation framework should prove that it can detect meaningful defects, not only produce passing green-path results.
+
+### Dependency Security Quality Gate
+
+The dependency security validation script checks dependency health and audit posture.
+
+Run:
+
+    .\scripts\validate_dependency_security.ps1
+
+The script treats the following as blocking:
+
+- Python package dependency health
+- Python vulnerability audit
+- Node production/runtime audit
+
+The full Node development/test-tooling audit is advisory.
+
+Current Newman/Postman transitive findings are documented and monitored rather than force-fixed, because the available forced fix would apply a breaking Newman downgrade.
+
+### Release Quality Gate
+
+The release quality gate script runs the major validation checks and generates a release-readiness report.
+
+Run:
+
+    .\scripts\run_release_quality_gate.ps1
+
+Optional controlled defect validation can be included with:
+
+    .\scripts\run_release_quality_gate.ps1 -IncludeControlledDefectValidation
+
+The default release gate does not include controlled defect validation because that script intentionally toggles defect behavior and recreates the API container.
 
 ## Release Progression
 
-| Release | Capability Added |
+| Release | Capability |
 |---|---|
-| v0.2.0 | REST Application Programming Interface (API) validation and smoke testing |
+| v0.2.0 | REST API validation and smoke testing |
 | v0.3.0 | Diagnostic logging and request timing |
 | v0.4.0 | Request identifier traceability |
 | v0.5.0 | Prometheus metrics and observability signals |
-| v0.6.0 | performance baseline results |
+| v0.6.0 | Performance baseline results |
 | v0.7.0 | Lightweight load testing |
 | v0.8.0 | Section 508-oriented accessibility smoke validation |
-| v0.9.0 | release quality gate results |
-| v1.0.0 | Reliability Software Development Engineer in Test (SDET) project baseline |
-| v1.1.0 | Continuous Integration (CI) quality gate expansion |
-| v1.2.0 | Application Programming Interface (API) contract validation |
+| v0.9.0 | Release quality gate results |
+| v1.0.0 | Reliability SDET project baseline |
+| v1.1.0 | Continuous Integration quality gate expansion |
+| v1.2.0 | API contract validation |
 | v1.3.0 | Accessibility scan validation |
 | v1.4.0 | PostgreSQL schema and synthetic seed data validation |
 | v1.5.0 | PostgreSQL-backed patient lookup validation |
 | v1.6.0 | API-to-database consistency validation |
 | v1.7.0 | PostgreSQL query plan and index validation |
 | v1.8.0 | Controlled defect detection validation |
+| v1.9.0 | Dependency cleanup and dependency security quality gate |
 
-## Main Validation Layers
+## v1.9.0 Dependency Security Work
 
-### Pytest Regression Testing
+The v1.9.0 milestone added dependency cleanup and dependency security quality gate behavior.
 
-Pytest validates backend behavior and Application Programming Interface (API) logic.
+Work completed:
 
-Purpose:
+- cleaned the Python dependency list
+- removed unused Python packages
+- removed an unused dashboard script that required `pandas` and `matplotlib`
+- updated `pytest` to resolve a Python audit finding
+- added `scripts/validate_dependency_security.ps1`
+- documented Newman/Postman transitive Node audit findings
+- classified the full Node development/test-tooling audit as advisory
+- integrated dependency security validation into the release quality gate
 
-- confirm expected endpoint behavior
-- catch regressions
-- validate synthetic patient scenarios
-- confirm generated pages return expected structure
+The release decision avoids blindly running:
 
-### Newman Application Programming Interface (API) Regression
+    npm audit fix --force
 
-Newman runs the Postman Application Programming Interface (API) regression collection.
+The current audit output indicates that the forced fix would downgrade Newman in a breaking way.
 
-Purpose:
+The project documents that risk instead of applying an unsafe automatic fix.
 
-- validate Application Programming Interface (API) contracts
-- confirm status codes and response expectations
-- provide repeatable command-line Application Programming Interface (API) checks
+## Documentation and Reports
 
-### Playwright Automation
+Key documentation:
 
-Playwright validates browser-facing and workflow behavior.
+| Document | Purpose |
+|---|---|
+| `docs/RELEASE_QUALITY_GATES.md` | Release quality gate behavior |
+| `docs/DEPENDENCY_SECURITY_QUALITY_GATE.md` | Dependency cleanup and dependency security validation |
+| `docs/POSTGRESQL_SCHEMA.md` | PostgreSQL schema and seed data |
+| `docs/ACCESSIBILITY_SCAN_VALIDATION.md` | axe-core accessibility scan validation |
+| `docs/SECTION_508_ACCESSIBILITY.md` | Section 508-oriented accessibility smoke validation |
+| `docs/PERFORMANCE_BASELINE.md` | Performance baseline explanation |
+| `docs/LIGHTWEIGHT_LOAD_TESTING.md` | Lightweight load testing explanation |
+| `docs/METRICS_AND_PERFORMANCE_BASELINE.md` | Metrics and baseline foundation |
+| `docs/REQUEST_ID_TRACEABILITY.md` | Request identifier traceability |
+| `docs/DIAGNOSTIC_LOGGING.md` | Diagnostic logging and request timing |
 
-Purpose:
+Key reports:
 
-- validate user interface behavior
-- validate Application Programming Interface (API)-driven workflows
-- validate accessibility smoke checks
-- confirm that user-facing behavior works from an external test runner
+| Report | Purpose |
+|---|---|
+| `reports/release_quality_gate_v1.9.0.md` | Integrated v1.9.0 release quality gate result |
+| `reports/dependency_security_quality_gate_v1.9.0.md` | Dependency cleanup and security gate report |
+| `reports/performance_baseline_quality_gate_v1.9.0.md` | v1.9.0 performance baseline output |
+| `reports/lightweight_load_test_quality_gate_v1.9.0.md` | v1.9.0 lightweight load test output |
+| `reports/controlled_defect_detection_v1.8.0.md` | Controlled defect detection result |
+| `reports/postgresql_query_plan_index_validation_v1.7.0.md` | Query plan/index validation result |
+| `reports/api_database_consistency_validation_v1.6.0.md` | API/database consistency result |
+| `reports/postgresql_backed_patient_lookup_v1.5.0.md` | PostgreSQL-backed API validation result |
+| `reports/postgresql_schema_seed_data_v1.4.0.md` | Schema and seed data validation result |
 
-### Docker Smoke Validation
+## Reliability Value
 
-Docker Compose starts the local system.
+The framework demonstrates that reliability validation is not a single test type.
 
-Purpose:
+It combines:
 
-- confirm the service can run in a containerized local environment
-- validate health checks
-- run key end-to-end checks against the running service
-
-### Prometheus Metrics
-
-Prometheus metrics expose measurable reliability signals.
-
-Purpose:
-
-- count requests
-- measure request duration
-- track patient lookup outcomes
-- support future dashboarding and alerting
-
-### Performance Baseline
-
-The performance baseline captures normal local response-time and error-rate behavior.
-
-Purpose:
-
-- establish a known-good reference point
-- capture count, pass/fail, error rate, average response time, minimum, maximum, and p95 response time
-- support future performance comparison
-
-### Lightweight Load Testing
-
-The lightweight load test applies a weighted traffic mix with concurrency.
-
-Purpose:
-
-- simulate more realistic local traffic
-- capture throughput
-- capture p95 and p99 response time
-- identify tail-latency outliers
-- confirm expected status codes under small concurrent load
-
-### Section 508-Oriented Accessibility Smoke Validation
-
-The accessibility smoke validation checks basic accessible structure and keyboard-friendly behavior.
-
-Purpose:
-
-- validate page title and heading
-- validate accessible input labels
-- validate accessible button role and name
-- validate keyboard reachability
-- validate live result-region feedback
-
-This does not claim full Section 508 certification. It is a smoke validation layer that can be expanded later.
-
-
-### API Contract Validation
-
-API contract validation checks that selected Application Programming Interface (API) responses keep the expected structure, required fields, data types, and error formats.
-
-Purpose:
-
-- validate stable response fields
-- validate expected data types
-- validate date and datetime formatting
-- validate expected error response structure
-- detect response-shape changes that status-code checks may miss
-
-Test file:
-
-    tests/test_api_contract_validation.py
-
-
-### Accessibility Scan Validation
-
-Accessibility scan validation uses axe-core through Playwright to scan the rendered Patient Lookup page for automatically detectable accessibility violations.
-
-Purpose:
-
-- scan the rendered page with automated accessibility rules
-- supplement page-specific accessibility smoke checks
-- validate selected WCAG rule tags
-- keep accessibility validation in the automated test path
-- provide a repeatable check that can expand as more pages are added
-
-Test file:
-
-    tests/ui/patient_lookup_axe_accessibility.spec.ts
-
-### PostgreSQL Schema Validation
-
-PostgreSQL schema validation checks that the local database foundation is repeatable, relationally valid, and ready to support future API/database consistency testing.
-
-Purpose:
-
-- validate the PostgreSQL container is running
-- confirm the expected database tables exist
-- confirm deterministic synthetic seed data loaded correctly
-- validate many-to-many join behavior through the encounter_diagnoses bridge table
-- validate left join behavior for patients with and without encounters
-- support future query plan and index performance comparison
-
-Validation script:
-
-    scripts/validate_postgresql_schema.ps1
-
-Documentation:
-
-    docs/POSTGRESQL_SCHEMA.md
-
-Report:
-
-    reports/postgresql_schema_seed_data_v1.4.0.md
-
-### Release Quality Gate
-
-The release quality gate runs major validation checks and generates results before release.
-
-Purpose:
-
-- replace ad hoc release judgment with repeatable validation
-- organize regression, smoke, performance, accessibility, and Application Programming Interface (API) checks
-- generate a release-readiness report
-
-## International Software Testing Qualifications Board (ISTQB) / Certified Tester Foundation Level (CTFL) Alignment
-
-This project reinforces the following testing concepts:
-
-- test levels
-- test types
+- functional validation
+- contract validation
 - regression testing
-- confirmation testing
-- acceptance criteria
-- exit criteria
-- test completion criteria
-- test results
-- risk-based testing
-- defect prevention
+- observability
+- accessibility awareness
+- performance baselining
+- lightweight load testing
+- database consistency validation
+- query plan review
+- controlled defect detection
+- dependency security review
+- release gate reporting
 
-## Department of Homeland Security (DHS) / Section 508 Alignment
-
-This project reinforces the following accessibility concepts:
-
-- accessibility should be tested before release
-- user-facing controls need accessible labels
-- keyboard interaction matters
-- page structure matters
-- automated smoke validation is useful but does not replace full formal Section 508 testing
-- accessibility should be part of release readiness, not an afterthought
-
-## How to Run the Main Quality Gate
-
-Start Docker Desktop first.
-
-Then run:
-
-    .\scripts\run_release_quality_gate.ps1
-
-Expected result:
-
-    Release quality gate completed successfully.
-
-Report generated:
-
-    reports/release_quality_gate_v0.9.0.md
+The result is a repeatable validation process that makes release decisions more visible and less dependent on ad hoc judgment.
 
 ## Current Scope
 
-This is a practice project. It does not claim to be an enterprise production system.
+This project is practice-scale.
 
-It is designed to demonstrate modern quality engineering practices in a controlled, explainable environment.
+It is designed to demonstrate quality engineering and reliability validation concepts in a controlled environment.
+
+It is not a full enterprise production system, a real healthcare application, or a full security compliance program.
 
 ## Future Improvements
 
-Possible future work includes:
+Possible future improvements include:
 
-- Kubernetes local deployment validation
-- GitHub Actions quality gate expansion
-- axe-core accessibility scanning
-- performance threshold enforcement
-- baseline comparison reports
-- stronger security testing documentation
-- Department of Homeland Security (DHS) Trusted Tester study alignment
-
-
-
-
-
-
-
+- add dependency security validation to GitHub Actions
+- add Dependabot configuration
+- generate a Software Bill of Materials
+- add review dates for advisory dependency findings
+- evaluate alternatives to Newman if transitive audit findings remain unresolved
+- add stronger release threshold enforcement
+- expand accessibility validation
+- add additional database-volume query plan comparisons

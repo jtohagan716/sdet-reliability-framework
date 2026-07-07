@@ -1,5 +1,6 @@
-param(
-    [string]$ReportPath = "reports/release_quality_gate_v0.9.0.md"
+﻿param(
+    [string]$ReportPath = "reports/release_quality_gate_v1.9.0.md",
+    [switch]$IncludeControlledDefectValidation
 )
 
 $ErrorActionPreference = "Continue"
@@ -51,7 +52,8 @@ function Write-QualityGateReport {
         [string]$Path,
         [array]$Results,
         [datetime]$StartedAt,
-        [datetime]$CompletedAt
+        [datetime]$CompletedAt,
+        [bool]$ControlledDefectIncluded
     )
 
     $reportDirectory = Split-Path $Path -Parent
@@ -74,6 +76,7 @@ function Write-QualityGateReport {
         "Passed: ``$passed``",
         "Failed: ``$failed``",
         "Elapsed Seconds: ``$elapsedSeconds``",
+        "Controlled Defect Validation Included: ``$ControlledDefectIncluded``",
         "",
         "## Summary",
         "",
@@ -111,7 +114,15 @@ function Write-QualityGateReport {
         "",
         "A passing quality gate means the selected automated checks completed successfully before release.",
         "",
-        "The gate includes syntax checks, regression testing, Application Programming Interface (API) contract testing, user interface and API automation, accessibility smoke validation, Performance baseline results, lightweight load testing, and Docker-based smoke validation.",
+        "The gate includes dependency security validation, syntax checks, regression testing, Docker stack startup, Application Programming Interface (API) contract testing, Postman/Newman validation, Playwright automation, accessibility smoke validation, PostgreSQL schema validation, API-to-database consistency validation, query plan/index validation, performance baseline results, lightweight load testing, and Docker/API smoke validation.",
+        "",
+        "## Dependency Security Connection",
+        "",
+        "Dependency validation is included as part of release readiness. Python dependency health and Python vulnerability audit checks are blocking. Node production/runtime audit is blocking. The full Node development/test-tooling audit is handled inside the dependency security gate as an advisory review because current Newman/Postman findings require impact analysis rather than a forced breaking downgrade.",
+        "",
+        "## Database Reliability Connection",
+        "",
+        "PostgreSQL schema validation, PostgreSQL-backed patient lookup validation, API-to-database consistency validation, and query plan/index validation are included to confirm that backend data behavior remains stable after changes.",
         "",
         "## International Software Testing Qualifications Board (ISTQB) / Certified Tester Foundation Level (CTFL) Connection",
         "",
@@ -123,13 +134,23 @@ function Write-QualityGateReport {
         "",
         "## Reliability Value",
         "",
-        "The release quality gate turns individual validation commands into a repeatable validation workflow. It helps replace ad hoc release judgment with documented, repeatable validation checks."
+        "The release quality gate turns individual validation commands into a repeatable validation workflow. It helps replace ad hoc release judgment with documented, repeatable validation checks.",
+        "",
+        "## Controlled Defect Validation",
+        "",
+        "Controlled defect detection validation is available as an optional release-gate step by running this script with ``-IncludeControlledDefectValidation``.",
+        "",
+        "It is not enabled by default because it intentionally enables a defect mode, validates that the consistency checks catch the defect, and then restores normal behavior."
     )
 
     $lines | Set-Content $Path
 }
 
 $gateSteps = @(
+    @{
+        Name = "Dependency security quality gate"
+        Command = ".\scripts\validate_dependency_security.ps1"
+    },
     @{
         Name = "Python syntax check - FastAPI app"
         Command = "python -m py_compile .\api_service\app.py"
@@ -151,6 +172,22 @@ $gateSteps = @(
         Command = "docker compose up -d --build"
     },
     @{
+        Name = "PostgreSQL schema validation"
+        Command = ".\scripts\validate_postgresql_schema.ps1"
+    },
+    @{
+        Name = "PostgreSQL-backed patient lookup validation"
+        Command = ".\scripts\validate_postgresql_patient_lookup.ps1"
+    },
+    @{
+        Name = "API-to-database consistency validation"
+        Command = ".\scripts\validate_api_database_consistency.ps1"
+    },
+    @{
+        Name = "PostgreSQL query plan and index validation"
+        Command = ".\scripts\validate_patient_lookup_query_plan.ps1"
+    },
+    @{
         Name = "Newman API regression"
         Command = "npm run postman:test"
     },
@@ -164,17 +201,24 @@ $gateSteps = @(
     },
     @{
         Name = "Performance baseline results"
-        Command = "python .\scripts\run_performance_baseline.py --output reports/performance_baseline_quality_gate_v0.9.0.md"
+        Command = "python .\scripts\run_performance_baseline.py --output reports/performance_baseline_quality_gate_v1.9.0.md"
     },
     @{
         Name = "Lightweight load test results"
-        Command = "python .\scripts\run_lightweight_load_test.py --output reports/lightweight_load_test_quality_gate_v0.9.0.md"
+        Command = "python .\scripts\run_lightweight_load_test.py --output reports/lightweight_load_test_quality_gate_v1.9.0.md"
     },
     @{
         Name = "Local Docker/API smoke validation"
         Command = ".\scripts\local_smoke_validation.ps1"
     }
 )
+
+if ($IncludeControlledDefectValidation) {
+    $gateSteps += @{
+        Name = "Controlled defect detection validation"
+        Command = ".\scripts\validate_controlled_defect_detection.ps1"
+    }
+}
 
 foreach ($step in $gateSteps) {
     Invoke-QualityGateStep -Name $step.Name -Command $step.Command
@@ -186,7 +230,8 @@ Write-QualityGateReport `
     -Path $ReportPath `
     -Results $results `
     -StartedAt $overallStart `
-    -CompletedAt $overallEnd
+    -CompletedAt $overallEnd `
+    -ControlledDefectIncluded ([bool]$IncludeControlledDefectValidation)
 
 Write-Host ""
 Write-Host "Release quality gate report written to: $ReportPath" -ForegroundColor Cyan
@@ -200,7 +245,3 @@ if ($failedCount -gt 0) {
 
 Write-Host "Release quality gate completed successfully." -ForegroundColor Green
 exit 0
-
-
-
-
