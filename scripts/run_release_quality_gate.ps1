@@ -39,10 +39,10 @@ function Invoke-QualityGateStep {
     }
 
     $script:results += [PSCustomObject]@{
-        Name = $Name
-        Command = $Command
-        Status = $status
-        ExitCode = $process.ExitCode
+        Name            = $Name
+        Command         = $Command
+        Status          = $status
+        ExitCode        = $process.ExitCode
         DurationSeconds = $durationSeconds
     }
 }
@@ -148,74 +148,74 @@ function Write-QualityGateReport {
 
 $gateSteps = @(
     @{
-        Name = "Dependency security quality gate"
+        Name    = "Dependency security quality gate"
         Command = ".\scripts\validate_dependency_security.ps1"
     },
     @{
-        Name = "Python syntax check - FastAPI app"
+        Name    = "Python syntax check - FastAPI app"
         Command = "python -m py_compile .\api_service\app.py"
     },
     @{
-        Name = "Python syntax check - performance baseline script"
+        Name    = "Python syntax check - performance baseline script"
         Command = "python -m py_compile .\scripts\run_performance_baseline.py"
     },
     @{
-        Name = "Python syntax check - lightweight load test script"
+        Name    = "Python syntax check - lightweight load test script"
         Command = "python -m py_compile .\scripts\run_lightweight_load_test.py"
     },
     @{
-        Name = "Full Pytest regression suite"
+        Name    = "Full Pytest regression suite"
         Command = "python -m pytest"
     },
     @{
-        Name = "Start Docker stack"
+        Name    = "Start Docker stack"
         Command = "docker compose up -d --build"
     },
     @{
-        Name = "PostgreSQL schema validation"
+        Name    = "PostgreSQL schema validation"
         Command = ".\scripts\validate_postgresql_schema.ps1"
     },
     @{
-        Name = "PostgreSQL-backed patient lookup validation"
+        Name    = "PostgreSQL-backed patient lookup validation"
         Command = ".\scripts\validate_postgresql_patient_lookup.ps1"
     },
     @{
-        Name = "API-to-database consistency validation"
+        Name    = "API-to-database consistency validation"
         Command = ".\scripts\validate_api_database_consistency.ps1"
     },
     @{
-        Name = "PostgreSQL query plan and index validation"
+        Name    = "PostgreSQL query plan and index validation"
         Command = ".\scripts\validate_patient_lookup_query_plan.ps1"
     },
     @{
-        Name = "Newman API regression"
+        Name    = "Newman API regression"
         Command = "npm run postman:test"
     },
     @{
-        Name = "Focused Section 508 accessibility smoke validation"
-        Command = "npx playwright test tests/ui/patient_lookup_accessibility.spec.ts"
+        Name    = "Focused Section 508 accessibility smoke validation"
+        Command = "npx playwright test tests/ui/patient_lookup_accessibility.spec.ts --project=chromium --workers=1"
     },
     @{
-        Name = "Full Playwright automation"
+        Name    = "Full Playwright automation"
         Command = "npx playwright test"
     },
     @{
-        Name = "Performance baseline results"
+        Name    = "Performance baseline results"
         Command = "python .\scripts\run_performance_baseline.py --output reports/performance_baseline_quality_gate_v1.9.0.md"
     },
     @{
-        Name = "Lightweight load test results"
+        Name    = "Lightweight load test results"
         Command = "python .\scripts\run_lightweight_load_test.py --output reports/lightweight_load_test_quality_gate_v1.9.0.md"
     },
     @{
-        Name = "Local Docker/API smoke validation"
+        Name    = "Local Docker/API smoke validation"
         Command = ".\scripts\local_smoke_validation.ps1"
     }
 )
 
 if ($IncludeControlledDefectValidation) {
     $gateSteps += @{
-        Name = "Controlled defect detection validation"
+        Name    = "Controlled defect detection validation"
         Command = ".\scripts\validate_controlled_defect_detection.ps1"
     }
 }
