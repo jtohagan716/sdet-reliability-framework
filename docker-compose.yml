@@ -9,6 +9,7 @@
       - "8000:8000"
     environment:
       PATIENT_DATA_SOURCE: postgres
+      PATIENT_LOOKUP_DEFECT_MODE: none
       DATABASE_URL: postgresql://sdet_user:sdet_password@postgres:5432/sdet_reliability
     depends_on:
       postgres:
