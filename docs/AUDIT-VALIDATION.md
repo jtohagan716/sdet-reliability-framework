@@ -105,9 +105,8 @@ This proves audit behavior without permanently inserting validation records.
 
 ## Screenshot: Manual Audit Validation
 
-```markdown
 ![Manual audit validation result](images/postgres-audit-query-by-trace-id.png)
-```
+
 
 <sub>Capture file: `docs/images/postgres-audit-query-by-trace-id.png`</sub>
 
