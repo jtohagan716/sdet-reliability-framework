@@ -193,9 +193,9 @@ This endpoint:
 
 ## Screenshot: API Audit/OpenTelemetry Response
 
-```markdown
+
 ![Audit OpenTelemetry endpoint response](images/audit-otel-endpoint-response.png)
-```
+
 
 <sub>Capture file: `docs/images/audit-otel-endpoint-response.png`</sub>
 
