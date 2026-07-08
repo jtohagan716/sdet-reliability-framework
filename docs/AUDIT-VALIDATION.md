@@ -230,9 +230,9 @@ This proves that the runtime request trace and the database audit trail are corr
 
 ## Screenshot: Audit Rows by Trace ID
 
-```markdown
+
 ![PostgreSQL audit query by trace ID](images/postgres-audit-query-by-trace-id.png)
-```
+
 
 <sub>Capture file: `docs/images/postgres-audit-query-by-trace-id.png`</sub>
 
