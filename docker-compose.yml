@@ -1,4 +1,25 @@
 ﻿services:
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: sdet-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: sdet-otel-collector
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./otel/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "13133:13133"
+    depends_on:
+      - jaeger
+
   api:
     build:
       context: .
@@ -11,9 +32,18 @@
       PATIENT_DATA_SOURCE: postgres
       PATIENT_LOOKUP_DEFECT_MODE: none
       DATABASE_URL: postgresql://sdet_user:sdet_password@postgres:5432/sdet_reliability
+      OTEL_SERVICE_NAME: sdet-reliability-api
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      ENABLE_QA_ENDPOINTS: "true"
     depends_on:
       postgres:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
       interval: 10s
