@@ -5,8 +5,9 @@ This test runs the SQL validation script against the local Docker Compose
 PostgreSQL service and verifies that the encounter audit trigger records the
 expected INSERT and UPDATE audit rows.
 
-Prerequisite:
-    docker compose up -d
+This is a Docker-backed integration test. It runs when the local PostgreSQL
+Compose service is available and skips cleanly when that service is not running,
+such as in a default GitHub Actions unit-test job.
 """
 
 import subprocess
@@ -17,6 +18,45 @@ import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 VALIDATION_SCRIPT = PROJECT_ROOT / "scripts" / "validate_encounter_audit.sql"
+
+
+def postgres_compose_service_is_available() -> tuple[bool, str]:
+    """
+    Return whether the Docker Compose PostgreSQL service is available.
+
+    This prevents the integration test from failing in environments where the
+    Docker Compose stack has not been started, such as a generic CI pytest job.
+    """
+
+    command = [
+        "docker",
+        "compose",
+        "exec",
+        "-T",
+        "postgres",
+        "pg_isready",
+        "-U",
+        "sdet_user",
+        "-d",
+        "sdet_reliability",
+    ]
+
+    try:
+        result = subprocess.run(
+            command,
+            text=True,
+            capture_output=True,
+            cwd=PROJECT_ROOT,
+            check=False,
+        )
+    except FileNotFoundError:
+        return False, "Docker is not available."
+
+    if result.returncode != 0:
+        details = (result.stderr or result.stdout or "PostgreSQL service is not ready.").strip()
+        return False, details
+
+    return True, result.stdout.strip()
 
 
 def run_psql_script(sql_text: str) -> subprocess.CompletedProcess:
@@ -68,6 +108,7 @@ def extract_audit_result_rows(psql_output: str) -> list[str]:
     ]
 
 
+@pytest.mark.integration
 def test_encounter_audit_validation_script_records_insert_and_update():
     """
     Validate that the PostgreSQL encounter audit trigger captures:
@@ -82,12 +123,16 @@ def test_encounter_audit_validation_script_records_insert_and_update():
     if not VALIDATION_SCRIPT.exists():
         pytest.fail(f"Validation script not found: {VALIDATION_SCRIPT}")
 
-    sql_text = VALIDATION_SCRIPT.read_text(encoding="utf-8")
+    postgres_available, availability_message = postgres_compose_service_is_available()
 
-    try:
-        result = run_psql_script(sql_text)
-    except FileNotFoundError:
-        pytest.skip("Docker is not available in this environment.")
+    if not postgres_available:
+        pytest.skip(
+            "Docker Compose PostgreSQL service is not available for this "
+            f"integration test: {availability_message}"
+        )
+
+    sql_text = VALIDATION_SCRIPT.read_text(encoding="utf-8")
+    result = run_psql_script(sql_text)
 
     if result.returncode != 0:
         pytest.fail(
