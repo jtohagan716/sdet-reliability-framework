@@ -4,7 +4,6 @@ import random
 import time
 import uuid
 from datetime import datetime, UTC
-
 from fastapi.responses import HTMLResponse
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from fastapi import FastAPI, Header, HTTPException, Path, Request
@@ -12,6 +11,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from framework.security.jwt_decoder import decode_jwt
 from framework.security.jwt_inspector import inspect_jwt
+from api_service.database import get_connection
 from api_service.repositories.patients import get_patient_summary_from_postgres
 
 
@@ -421,3 +421,110 @@ def get_patient_summary(
     )
 
     return patient
+
+@app.post("/qa/audit-otel-validation")
+def audit_otel_validation(request: Request):
+    """
+    Local validation endpoint for audit + OpenTelemetry trace correlation.
+
+    This endpoint:
+    - creates a synthetic encounter
+    - updates the encounter status
+    - allows the PostgreSQL audit trigger to write audit rows
+    - stores the active OpenTelemetry trace_id/span_id in encounter_audit
+    """
+
+    if os.getenv("ENABLE_QA_ENDPOINTS", "false").lower() != "true":
+        raise HTTPException(
+            status_code=404,
+            detail="QA endpoint is not enabled",
+        )
+    from api_service.observability.audit_context import set_postgres_audit_context
+    with get_connection() as connection:
+        trace_id, span_id = set_postgres_audit_context(
+            connection=connection,
+            request=request,
+        )
+
+        refs = connection.execute(
+            """
+            SELECT
+                COALESCE((SELECT MAX(encounter_id) FROM encounters), 0) + 1 AS encounter_id,
+                (SELECT MIN(patient_id) FROM patients) AS patient_id,
+                (SELECT MIN(provider_id) FROM providers) AS provider_id,
+                (SELECT MIN(facility_id) FROM facilities) AS facility_id
+            """
+        ).fetchone()
+
+        encounter_id = refs["encounter_id"]
+
+        connection.execute(
+            """
+            INSERT INTO encounters (
+                encounter_id,
+                patient_id,
+                provider_id,
+                facility_id,
+                encounter_date,
+                encounter_type,
+                status
+            )
+            VALUES (
+                %s,
+                %s,
+                %s,
+                %s,
+                CURRENT_DATE,
+                'primary_care',
+                'scheduled'
+            )
+            """,
+            (
+                encounter_id,
+                refs["patient_id"],
+                refs["provider_id"],
+                refs["facility_id"],
+            ),
+        )
+
+        connection.execute(
+            """
+            UPDATE encounters
+            SET status = 'completed'
+            WHERE encounter_id = %s
+            """,
+            (encounter_id,),
+        )
+
+        connection.commit()
+
+        audit_rows = connection.execute(
+            """
+            SELECT
+                audit_id,
+                encounter_id,
+                operation_type,
+                old_status,
+                new_status,
+                trace_id,
+                span_id,
+                request_id,
+                request_method,
+                request_path,
+                service_name,
+                changed_at
+            FROM encounter_audit
+            WHERE encounter_id = %s
+            ORDER BY audit_id
+            """,
+            (encounter_id,),
+        ).fetchall()
+
+    return {
+        "validation": "passed" if len(audit_rows) == 2 else "review_required",
+        "encounter_id": encounter_id,
+        "trace_id": trace_id,
+        "span_id": span_id,
+        "audit_row_count": len(audit_rows),
+        "audit_rows": audit_rows,
+    }
