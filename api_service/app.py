@@ -44,6 +44,12 @@ app = FastAPI(
     title="Synthetic Echo Service",
     description="Controlled test service for reliability and latency simulation.",
 )
+
+if os.getenv("OTEL_ENABLED", "false").lower() == "true":
+    from api_service.observability.otel_config import configure_opentelemetry
+
+    configure_opentelemetry(app)
+
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
 logging.basicConfig(
