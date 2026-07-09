@@ -271,6 +271,7 @@ Key documentation includes:
 - [Idempotency and Retry Safety](docs/IDEMPOTENCY-AND-RETRY-SAFETY.md)
 - [FHIR Interoperability Roadmap](docs/FHIR-INTEROPERABILITY-ROADMAP.md)
 - [FHIR PostgreSQL Validation Evidence](docs/FHIR-POSTGRES-VALIDATION-EVIDENCE.md)
+- [FHIR Stale Message Protection](docs/FHIR-STALE-MESSAGE-PROTECTION.md)
 
 ## Healthcare Interoperability Validation
 
