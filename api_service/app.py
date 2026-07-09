@@ -3,6 +3,8 @@ import os
 import random
 import time
 import uuid
+import hashlib
+import json
 from datetime import datetime, UTC
 from fastapi.responses import HTMLResponse
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
@@ -346,6 +348,211 @@ def patient_lookup_page() -> str:
 </body>
 </html>
 """
+
+@app.post("/qa/idempotency-validation")
+async def validate_idempotency_behavior(
+    request: Request,
+    idempotency_key: str | None = Header(
+        default=None,
+        alias="Idempotency-Key",
+    ),
+):
+    """
+    Validate retry-safe idempotency behavior.
+
+    Behavior:
+    - First request with a new Idempotency-Key stores a response.
+    - Retry with the same key and same request body returns the stored response.
+    - Retry with the same key but different request body returns a conflict.
+    """
+
+    if os.getenv("ENABLE_QA_ENDPOINTS", "false").lower() != "true":
+        raise HTTPException(
+            status_code=404,
+            detail="QA endpoints are disabled",
+        )
+
+    if not idempotency_key:
+        raise HTTPException(
+            status_code=400,
+            detail="Idempotency-Key header is required",
+        )
+
+    body_bytes = await request.body()
+
+    if body_bytes:
+        try:
+            request_payload = json.loads(body_bytes)
+        except json.JSONDecodeError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="Request body must be valid JSON",
+            ) from exc
+    else:
+        request_payload = {}
+
+    canonical_request = json.dumps(
+        request_payload,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+    request_hash = (
+        "sha256:"
+        + hashlib.sha256(canonical_request.encode("utf-8")).hexdigest()
+    )
+
+    request_method = request.method
+    request_path = request.url.path
+    service_name = os.getenv("OTEL_SERVICE_NAME", "sdet-reliability-api")
+
+    synthetic_result_id = hashlib.sha256(
+        f"{idempotency_key}:{request_hash}".encode("utf-8")
+    ).hexdigest()[:12]
+
+    stored_response_body = {
+        "synthetic_operation": "create_encounter",
+        "synthetic_result_id": synthetic_result_id,
+        "status": "created",
+    }
+
+    with get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    idempotency_key,
+                    request_method,
+                    request_path,
+                    request_hash,
+                    response_status,
+                    response_body,
+                    replayed_count
+                FROM idempotency_keys
+                WHERE idempotency_key = %s
+                FOR UPDATE;
+                """,
+                (idempotency_key,),
+            )
+
+            existing_row = cursor.fetchone()
+
+            if existing_row:
+                existing_key = existing_row["idempotency_key"]
+                existing_method = existing_row["request_method"]
+                existing_path = existing_row["request_path"]
+                existing_hash = existing_row["request_hash"]
+                existing_status = existing_row["response_status"]
+                existing_response_body = existing_row["response_body"]
+                existing_replayed_count = existing_row["replayed_count"]
+
+                if (
+                    existing_method != request_method
+                    or existing_path != request_path
+                    or existing_hash != request_hash
+                ):
+                    connection.rollback()
+
+                    raise HTTPException(
+                        status_code=409,
+                        detail={
+                            "validation": "idempotency_conflict",
+                            "message": (
+                                "The same Idempotency-Key was reused "
+                                "with a different request method, path, or body."
+                            ),
+                            "idempotency_key": existing_key,
+                            "stored_request_hash": existing_hash,
+                            "incoming_request_hash": request_hash,
+                            "stored_request_method": existing_method,
+                            "incoming_request_method": request_method,
+                            "stored_request_path": existing_path,
+                            "incoming_request_path": request_path,
+                        },
+                    )
+
+                cursor.execute(
+                    """
+                    UPDATE idempotency_keys
+                    SET
+                        replayed_count = replayed_count + 1,
+                        last_replayed_at = NOW()
+                    WHERE idempotency_key = %s
+                    RETURNING replayed_count;
+                    """,
+                    (idempotency_key,),
+                )
+
+                replayed_count = cursor.fetchone()["replayed_count"]
+                connection.commit()
+
+                return {
+                    "validation": "idempotency_replayed",
+                    "idempotency_key": existing_key,
+                    "request_hash": existing_hash,
+                    "response_status": existing_status,
+                    "response_body": existing_response_body,
+                    "replayed": True,
+                    "replayed_count": replayed_count,
+                }
+
+            cursor.execute(
+                """
+                INSERT INTO idempotency_keys (
+                    idempotency_key,
+                    request_method,
+                    request_path,
+                    request_hash,
+                    response_status,
+                    response_body,
+                    service_name
+                )
+                VALUES (
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s::jsonb,
+                    %s
+                )
+                RETURNING
+                    idempotency_key,
+                    request_hash,
+                    response_status,
+                    response_body,
+                    replayed_count;
+                """,
+                (
+                    idempotency_key,
+                    request_method,
+                    request_path,
+                    request_hash,
+                    201,
+                    json.dumps(stored_response_body),
+                    service_name,
+                ),
+            )
+
+            created_row = cursor.fetchone()
+
+            created_key = created_row["idempotency_key"]
+            created_hash = created_row["request_hash"]
+            response_status = created_row["response_status"]
+            response_body = created_row["response_body"]
+            replayed_count = created_row["replayed_count"]
+
+            connection.commit()
+
+            return {
+                "validation": "idempotency_created",
+                "idempotency_key": created_key,
+                "request_hash": created_hash,
+                "response_status": response_status,
+                "response_body": response_body,
+                "replayed": False,
+                "replayed_count": replayed_count,
+            }
 
 @app.get(
     "/patients/{patient_id}",
