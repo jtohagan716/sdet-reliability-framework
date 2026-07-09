@@ -270,6 +270,7 @@ Key documentation includes:
 - [Ports and Protocols](docs/PORTS-AND-PROTOCOLS.md)
 - [Idempotency and Retry Safety](docs/IDEMPOTENCY-AND-RETRY-SAFETY.md)
 - [FHIR Interoperability Roadmap](docs/FHIR-INTEROPERABILITY-ROADMAP.md)
+- [FHIR PostgreSQL Validation Evidence](docs/FHIR-POSTGRES-VALIDATION-EVIDENCE.md)
 
 ## Healthcare Interoperability Validation
 
