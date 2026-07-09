@@ -92,7 +92,13 @@ def test_idempotency_endpoint_creates_replays_and_rejects_conflict():
             timeout=5,
         )
 
-        assert first_response.status_code == 200
+        if first_response.status_code == 404:
+            pytest.skip(
+                "Idempotency QA endpoint is disabled or unavailable. "
+                "Set ENABLE_QA_ENDPOINTS=true when running this integration test."
+            )
+
+        assert first_response.status_code == 200, first_response.text
 
         first_body = first_response.json()
 
