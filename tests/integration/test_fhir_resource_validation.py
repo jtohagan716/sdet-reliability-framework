@@ -54,9 +54,6 @@ def collect_declared_references(resource: dict) -> list[str]:
 
     This intentionally starts with the reference fields used by this project:
     subject, encounter, and DiagnosticReport.result.
-
-    The goal is not full FHIR conformance yet. The goal is project-specific
-    reference integrity validation for the initial synthetic healthcare chain.
     """
     references = []
 
@@ -111,9 +108,6 @@ def load_valid_resource_chain() -> list[dict]:
 def test_synthetic_fhir_resources_have_expected_resource_types():
     """
     Validate that each synthetic FHIR fixture declares the expected resourceType.
-
-    This is the first layer of FHIR-style validation:
-    the file should identify what kind of healthcare resource it represents.
     """
     patient, encounter, observation, diagnostic_report = load_valid_resource_chain()
 
@@ -126,13 +120,6 @@ def test_synthetic_fhir_resources_have_expected_resource_types():
 def test_synthetic_fhir_resources_form_expected_reference_chain():
     """
     Validate the expected happy-path healthcare interoperability chain.
-
-    Expected synthetic chain:
-
-    Patient/example-patient-001
-      -> Encounter/example-encounter-001
-        -> Observation/example-observation-001
-          -> DiagnosticReport/example-diagnosticreport-001
     """
     patient, encounter, observation, diagnostic_report = load_valid_resource_chain()
 
