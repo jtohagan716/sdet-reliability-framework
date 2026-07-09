@@ -269,6 +269,19 @@ Key documentation includes:
 - [Observability and OpenTelemetry](docs/OBSERVABILITY.md)
 - [Ports and Protocols](docs/PORTS-AND-PROTOCOLS.md)
 - [Idempotency and Retry Safety](docs/IDEMPOTENCY-AND-RETRY-SAFETY.md)
+- [FHIR Interoperability Roadmap](docs/FHIR-INTEROPERABILITY-ROADMAP.md)
+
+## Healthcare Interoperability Validation
+
+This project includes a healthcare interoperability validation module using synthetic FHIR-style resources.
+
+The first phase validates a simple healthcare reference chain:
+
+```text
+Patient
+  -> Encounter
+    -> Observation
+      -> DiagnosticReport
 
 ## Dependency Security Notes
 
