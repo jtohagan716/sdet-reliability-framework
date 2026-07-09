@@ -509,6 +509,9 @@ Key documentation includes:
 * [Metrics and Performance Baseline](docs/METRICS_AND_PERFORMANCE_BASELINE.md)
   Metrics and baseline foundation.
 
+* [Portfolio Review Guide](docs/PORTFOLIO_REVIEW_GUIDE.md)  
+  Reviewer-focused guide showing how the project demonstrates API behavior, database validation, audit evidence, observability, retry safety, and healthcare-style data quality validation.
+
 ### Observability and Runtime Diagnostics
 
 * [Request ID Traceability](docs/REQUEST_ID_TRACEABILITY.md)
