@@ -10,6 +10,17 @@ It is not intended to be a complex business application or a production healthca
 
 The purpose is to demonstrate how a system can be validated, observed, measured, tested under lightweight load, checked for accessibility smoke behavior, backed by deterministic PostgreSQL data, reviewed for dependency risk, and evaluated through a repeatable release quality gate.
 
+## Reliability Scenarios Covered
+
+This project validates several reliability-focused behaviors across API, database, observability, and test automation layers.
+
+- PostgreSQL audit validation for encounter changes
+- OpenTelemetry trace correlation from API requests to database behavior
+- Idempotency and retry-safety validation
+- Conflict detection for unsafe idempotency key reuse
+- Time To Live cleanup for idempotency records
+- Local Docker Compose validation with PostgreSQL, Prometheus, Grafana, Jaeger, and OpenTelemetry Collector
+
 ## What This Project Demonstrates
 
 This project demonstrates:
@@ -93,6 +104,7 @@ This project demonstrates:
 | /patients/abc | Expected invalid-input response |
 | /metrics | Prometheus metrics endpoint |
 | /patient-lookup | Simple user-facing page for accessibility smoke validation |
+
 
 ## Validation Layers
 
@@ -250,6 +262,13 @@ Key documentation includes:
 | docs/METRICS_AND_PERFORMANCE_BASELINE.md | Metrics and baseline foundation |
 | docs/REQUEST_ID_TRACEABILITY.md | Request identifier traceability |
 | docs/DIAGNOSTIC_LOGGING.md | Diagnostic logging and request timing |
+
+## Documentation
+
+- [PostgreSQL Audit Validation](docs/AUDIT-VALIDATION.md)
+- [Observability and OpenTelemetry](docs/OBSERVABILITY.md)
+- [Ports and Protocols](docs/PORTS-AND-PROTOCOLS.md)
+- [Idempotency and Retry Safety](docs/IDEMPOTENCY-AND-RETRY-SAFETY.md)
 
 ## Dependency Security Notes
 
