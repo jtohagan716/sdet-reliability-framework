@@ -1,0 +1,27 @@
+{
+    "event_id": "encounter-message-002-complete",
+    "event_type": "encounter_state_update",
+    "resource_reference": "Encounter/example-encounter-001",
+    "sequence_number": 2,
+    "arrival_order": 1,
+    "message_status": "accepted",
+    "payload_completeness": "complete",
+    "received_at": "2026-07-09T10:05:00-04:00",
+    "resource": {
+        "resourceType": "Encounter",
+        "id": "example-encounter-001",
+        "status": "finished",
+        "subject": {
+            "reference": "Patient/example-patient-001"
+        },
+        "period": {
+            "start": "2026-07-09T09:00:00-04:00",
+            "end": "2026-07-09T09:30:00-04:00"
+        }
+    },
+    "expected_processing_result": {
+        "accepted_as_current": true,
+        "stale": false,
+        "reason": "newer complete encounter state"
+    }
+}
