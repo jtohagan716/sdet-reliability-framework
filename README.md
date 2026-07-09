@@ -554,6 +554,9 @@ Key documentation includes:
   - [FHIR Stale Message PostgreSQL Evidence](docs/FHIR-STALE-MESSAGE-POSTGRES-EVIDENCE.md)  
   PostgreSQL-backed evidence for append-only message history, protected current Encounter state, and archived stale-message decisions.
 
+  - [Patient Data Quality Review Queue](docs/PATIENT-DATA-QUALITY-REVIEW-QUEUE.md)  
+  Documents how stale-message decisions can create reviewable patient data quality items with preserved review action history.
+
 ## Synthetic FHIR Test Data
 
 FHIR-style synthetic fixtures are stored under:
