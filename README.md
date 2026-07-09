@@ -548,6 +548,9 @@ Key documentation includes:
 * [FHIR Stale Message Protection](docs/FHIR-STALE-MESSAGE-PROTECTION.md)
   Out-of-order healthcare message handling and stale-update protection.
 
+  - [FHIR Stale Message PostgreSQL Evidence](docs/FHIR-STALE-MESSAGE-POSTGRES-EVIDENCE.md)  
+  PostgreSQL-backed evidence for append-only message history, protected current Encounter state, and archived stale-message decisions.
+
 ## Synthetic FHIR Test Data
 
 FHIR-style synthetic fixtures are stored under:
