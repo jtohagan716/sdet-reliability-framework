@@ -29,6 +29,7 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+.pytest_cache/
 # Performance Baselines
 
 reports/baselines/*.json
