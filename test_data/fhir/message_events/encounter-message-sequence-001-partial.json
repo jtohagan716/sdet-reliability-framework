@@ -1,0 +1,26 @@
+{
+    "event_id": "encounter-message-001-partial",
+    "event_type": "encounter_state_update",
+    "resource_reference": "Encounter/example-encounter-001",
+    "sequence_number": 1,
+    "arrival_order": 2,
+    "message_status": "stale",
+    "payload_completeness": "partial",
+    "received_at": "2026-07-09T10:06:00-04:00",
+    "resource": {
+        "resourceType": "Encounter",
+        "id": "example-encounter-001",
+        "status": "in-progress",
+        "subject": {
+            "reference": "Patient/example-patient-001"
+        },
+        "period": {
+            "start": "2026-07-09T09:00:00-04:00"
+        }
+    },
+    "expected_processing_result": {
+        "accepted_as_current": false,
+        "stale": true,
+        "reason": "older partial message arrived after newer complete state"
+    }
+}
