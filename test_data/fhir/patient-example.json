@@ -1,0 +1,21 @@
+{
+  "resourceType": "Patient",
+  "id": "example-patient-001",
+  "identifier": [
+    {
+      "system": "https://example.org/sdet-reliability-framework/patients",
+      "value": "SYNTH-PATIENT-001"
+    }
+  ],
+  "name": [
+    {
+      "use": "official",
+      "family": "Testpatient",
+      "given": [
+        "Alex"
+      ]
+    }
+  ],
+  "gender": "unknown",
+  "birthDate": "1980-01-01"
+}

@@ -1,0 +1,35 @@
+{
+  "resourceType": "DiagnosticReport",
+  "id": "example-diagnosticreport-001",
+  "identifier": [
+    {
+      "system": "https://example.org/sdet-reliability-framework/diagnosticreports",
+      "value": "SYNTH-DIAGNOSTICREPORT-001"
+    }
+  ],
+  "status": "final",
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "85353-1",
+        "display": "Vital signs, weight, height, head circumference, oxygen saturation and BMI panel"
+      }
+    ],
+    "text": "Synthetic vital signs report"
+  },
+  "subject": {
+    "reference": "Patient/example-patient-001"
+  },
+  "encounter": {
+    "reference": "Encounter/example-encounter-001"
+  },
+  "effectiveDateTime": "2026-07-09T09:15:00-04:00",
+  "issued": "2026-07-09T09:20:00-04:00",
+  "result": [
+    {
+      "reference": "Observation/example-observation-001"
+    }
+  ],
+  "conclusion": "Synthetic report for local interoperability validation only."
+}
