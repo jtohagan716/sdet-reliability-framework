@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS patient_data_quality_review_items (
     review_status TEXT NOT NULL CHECK (
         review_status IN (
             'pending_review',
-            'blessed_correct',
+            'confirmed_correct',
             'flagged_incorrect',
             'needs_reconciliation',
             'closed'
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS patient_data_quality_review_actions (
         action_type IN (
             'created',
             'assigned',
-            'blessed_correct',
+            'confirmed_correct',
             'flagged_incorrect',
             'marked_needs_reconciliation',
             'closed',
@@ -49,6 +49,38 @@ CREATE TABLE IF NOT EXISTS patient_data_quality_review_actions (
     action_note TEXT NOT NULL,
     action_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     details JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+ALTER TABLE patient_data_quality_review_items
+DROP CONSTRAINT IF EXISTS patient_data_quality_review_items_review_status_check;
+
+ALTER TABLE patient_data_quality_review_items
+ADD CONSTRAINT patient_data_quality_review_items_review_status_check
+CHECK (
+    review_status IN (
+        'pending_review',
+        'confirmed_correct',
+        'flagged_incorrect',
+        'needs_reconciliation',
+        'closed'
+    )
+);
+
+ALTER TABLE patient_data_quality_review_actions
+DROP CONSTRAINT IF EXISTS patient_data_quality_review_actions_action_type_check;
+
+ALTER TABLE patient_data_quality_review_actions
+ADD CONSTRAINT patient_data_quality_review_actions_action_type_check
+CHECK (
+    action_type IN (
+        'created',
+        'assigned',
+        'confirmed_correct',
+        'flagged_incorrect',
+        'marked_needs_reconciliation',
+        'closed',
+        'comment_added'
+    )
 );
 
 CREATE INDEX IF NOT EXISTS idx_patient_data_quality_review_items_patient_reference
