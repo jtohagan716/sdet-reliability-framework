@@ -559,7 +559,9 @@ Key documentation includes:
 
   - [Data Quality Work Queue Retry and Dead-Letter Validation](docs/DATA-QUALITY-WORK-QUEUE-RETRY-DEAD-LETTER.md)  
   Documents retry scheduling, max-attempt enforcement, dead-letter handling, error preservation, and queue failure history validation.
-  
+
+- [Query Performance Baseline Validation](docs/QUERY-PERFORMANCE-BASELINE.md)  
+  Documents the first PostgreSQL query performance baseline, including EXPLAIN ANALYZE evidence, timing capture, queue linkage validation, and the decision to measure before tuning.  
 
 ## Synthetic FHIR Test Data
 
