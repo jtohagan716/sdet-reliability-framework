@@ -565,6 +565,10 @@ Key documentation includes:
 
 - [Query Performance Tuning Comparison](docs/QUERY-PERFORMANCE-TUNING-COMPARISON.md)  
   Documents pre/post PostgreSQL query tuning evidence, targeted composite index validation, execution-plan comparison, and honest interpretation of local synthetic performance results.
+
+- [API Endpoint Performance Baseline](docs/API-ENDPOINT-PERFORMANCE-BASELINE.md)  
+  Documents API-layer response-time baseline validation for `/health` and `/qa/data-quality-review-items`, including request count, status codes, mean/median/p95 latency, payload size, and cleanup evidence.
+
 ## Synthetic FHIR Test Data
 
 FHIR-style synthetic fixtures are stored under:
