@@ -569,6 +569,9 @@ Key documentation includes:
 - [API Endpoint Performance Baseline](docs/API-ENDPOINT-PERFORMANCE-BASELINE.md)  
   Documents API-layer response-time baseline validation for `/health` and `/qa/data-quality-review-items`, including request count, status codes, mean/median/p95 latency, payload size, and cleanup evidence.
 
+- [Queue Performance Metrics Baseline](docs/QUEUE-PERFORMANCE-METRICS-BASELINE.md)  
+  Documents queue health baseline validation, including queue depth, status distribution, retry pressure, dead-letter visibility, backlog age, processing lock age, and history action metrics.
+
 ## Synthetic FHIR Test Data
 
 FHIR-style synthetic fixtures are stored under:
