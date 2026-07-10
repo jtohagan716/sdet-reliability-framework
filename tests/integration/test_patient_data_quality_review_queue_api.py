@@ -186,8 +186,17 @@ def test_patient_data_quality_review_queue_api_rejects_invalid_status():
 
 @pytest.mark.integration
 def test_patient_data_quality_review_queue_api_returns_404_for_missing_item():
+    if not docker_is_available():
+        pytest.skip("Docker is not available in this environment.")
+
+    if not postgres_service_is_available():
+        pytest.skip("PostgreSQL Docker service is not available.")
+
     if not api_service_is_available():
         pytest.skip("API service is not available.")
+
+    apply_sql_file(STALE_MESSAGE_SCHEMA)
+    apply_sql_file(REVIEW_QUEUE_SCHEMA)
 
     response = requests.get(
         f"{API_BASE_URL}/qa/data-quality-review-items/missing-review-item",
