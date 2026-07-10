@@ -572,6 +572,9 @@ Key documentation includes:
 - [Queue Performance Metrics Baseline](docs/QUEUE-PERFORMANCE-METRICS-BASELINE.md)  
   Documents queue health baseline validation, including queue depth, status distribution, retry pressure, dead-letter visibility, backlog age, processing lock age, and history action metrics.
 
+  - [Reliability Health Summary Report](docs/RELIABILITY-HEALTH-SUMMARY.md)  
+  Documents the consolidated reliability health report across query performance, tuning comparison, API endpoint baseline, and queue health metrics.
+
 ## Synthetic FHIR Test Data
 
 FHIR-style synthetic fixtures are stored under:
