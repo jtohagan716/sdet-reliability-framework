@@ -257,7 +257,7 @@ VALUES (
 
 UPDATE patient_data_quality_review_items
 SET
-    review_status = 'blessed_correct',
+    review_status = 'confirmed_correct',
     reviewed_at = NOW(),
     reviewed_by = 'synthetic_data_quality_reviewer',
     review_outcome = 'software_decision_correct',
@@ -274,10 +274,10 @@ INSERT INTO patient_data_quality_review_actions (
 )
 VALUES (
     :review_review_item_id,
-    'blessed_correct',
+    'confirmed_correct',
     'synthetic_data_quality_reviewer',
     'Data Quality Expert',
-    'Blessed software decision as correct after reviewing current and stale Encounter message evidence',
+    'Confirmed software decision as correct after reviewing current and stale Encounter message evidence',
     jsonb_build_object(
         'review_outcome', 'software_decision_correct',
         'current_state_confirmed', true,
@@ -345,7 +345,7 @@ ORDER BY arrival_order;
 
 SELECT
     CASE
-        WHEN review_status = 'blessed_correct'
+        WHEN review_status = 'confirmed_correct'
          AND review_outcome = 'software_decision_correct'
          AND assigned_role = 'Data Quality Expert'
         THEN 'passed'

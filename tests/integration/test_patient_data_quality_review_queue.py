@@ -110,7 +110,7 @@ def test_patient_data_quality_review_queue_records_review_outcome():
     assert "medium" in output
 
     assert "review_status" in output
-    assert "blessed_correct" in output
+    assert "confirmed_correct" in output
 
     assert "assigned_role" in output
     assert "Data Quality Expert" in output
@@ -123,7 +123,7 @@ def test_patient_data_quality_review_queue_records_review_outcome():
 
     assert "action_type" in output
     assert "created" in output
-    assert "blessed_correct" in output
+    assert "confirmed_correct" in output
 
     assert "current_sequence_number" in output
     assert "current_sequence_number      | 2" in output
