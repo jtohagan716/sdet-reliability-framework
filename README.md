@@ -563,6 +563,8 @@ Key documentation includes:
 - [Query Performance Baseline Validation](docs/QUERY-PERFORMANCE-BASELINE.md)  
   Documents the first PostgreSQL query performance baseline, including EXPLAIN ANALYZE evidence, timing capture, queue linkage validation, and the decision to measure before tuning.  
 
+- [Query Performance Tuning Comparison](docs/QUERY-PERFORMANCE-TUNING-COMPARISON.md)  
+  Documents pre/post PostgreSQL query tuning evidence, targeted composite index validation, execution-plan comparison, and honest interpretation of local synthetic performance results.
 ## Synthetic FHIR Test Data
 
 FHIR-style synthetic fixtures are stored under:
