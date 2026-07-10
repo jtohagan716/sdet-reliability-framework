@@ -15,6 +15,11 @@ from framework.security.jwt_decoder import decode_jwt
 from framework.security.jwt_inspector import inspect_jwt
 from api_service.database import get_connection
 from api_service.repositories.patients import get_patient_summary_from_postgres
+from api_service.repositories.data_quality_reviews import (
+    VALID_REVIEW_STATUSES,
+    get_review_item_detail,
+    list_review_items,
+)
 
 
 TRUSTED_ISSUER = "https://company-login.com"
@@ -735,3 +740,42 @@ def audit_otel_validation(request: Request):
         "audit_row_count": len(audit_rows),
         "audit_rows": audit_rows,
     }
+
+@app.get("/qa/data-quality-review-items")
+def get_patient_data_quality_review_items(
+    review_status: str | None = None,
+    limit: int = 25,
+):
+    if review_status is not None and review_status not in VALID_REVIEW_STATUSES:
+        raise HTTPException(status_code=400, detail="INVALID_REVIEW_STATUS")
+
+    try:
+        review_items = list_review_items(
+            review_status=review_status,
+            limit=limit,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="PATIENT_DATA_QUALITY_REVIEW_QUEUE_UNAVAILABLE",
+        ) from exc
+
+    return {
+        "review_items": review_items,
+        "count": len(review_items),
+    }
+
+@app.get("/qa/data-quality-review-items/{review_item_key}")
+def get_patient_data_quality_review_item(review_item_key: str):
+    try:
+        review_item = get_review_item_detail(review_item_key)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="PATIENT_DATA_QUALITY_REVIEW_QUEUE_UNAVAILABLE",
+        ) from exc
+
+    if review_item is None:
+        raise HTTPException(status_code=404, detail="REVIEW_ITEM_NOT_FOUND")
+
+    return review_item
