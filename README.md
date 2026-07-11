@@ -575,6 +575,9 @@ Key documentation includes:
   - [Reliability Health Summary Report](docs/RELIABILITY-HEALTH-SUMMARY.md)  
   Documents the consolidated reliability health report across query performance, tuning comparison, API endpoint baseline, and queue health metrics.
 
+  - [Observability Readiness Baseline](docs/OBSERVABILITY-READINESS-BASELINE.md)  
+  Documents Docker, PostgreSQL, API, Prometheus, Grafana, Jaeger, and OpenTelemetry Collector readiness validation.
+
 ## Synthetic FHIR Test Data
 
 FHIR-style synthetic fixtures are stored under:
