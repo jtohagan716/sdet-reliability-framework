@@ -364,26 +364,72 @@ Generated reports describe results from the documented local environment and tes
 
 ## Selected Release Milestones
 
-| Version | Milestone                                     |
-| ------- | --------------------------------------------- |
-| v0.2.0  | API validation and smoke testing              |
-| v0.3.0  | Diagnostic logging and request timing         |
-| v0.4.0  | Request identifier traceability               |
-| v0.5.0  | Prometheus metrics                            |
-| v0.6.0  | Performance baselines                         |
-| v0.7.0  | Lightweight load testing                      |
-| v0.8.0  | Accessibility smoke validation                |
-| v0.9.0  | Release quality gate                          |
-| v1.0.0  | Reliability SDET baseline                     |
-| v1.1.0  | Continuous Integration quality-gate expansion |
-| v1.2.0  | API contract validation                       |
-| v1.3.0  | Automated accessibility scanning              |
-| v1.4.0  | PostgreSQL schema and seed-data validation    |
-| v1.5.0  | PostgreSQL-backed patient lookup              |
-| v1.6.0  | API-to-database consistency                   |
-| v1.7.0  | Query-plan and index validation               |
-| v1.8.0  | Controlled defect detection                   |
-| v1.9.0  | Dependency security quality gate              |
+## Release Progression
+
+The project has progressed through 29 versioned releases, from its initial API validation foundation to the current observability and reliability baseline.
+
+### v0.2.0–v0.9.0
+
+Introduced:
+
+* API smoke testing
+* diagnostic logging
+* request traceability
+* Prometheus metrics
+* performance baselines
+* lightweight load testing
+* accessibility smoke validation
+* the first integrated release quality gate
+
+### v1.0.0–v1.3.0
+
+Introduced:
+
+* the reliability SDET baseline
+* Continuous Integration quality-gate expansion
+* API contract validation
+* automated accessibility scanning
+
+### v1.4.0–v1.9.0
+
+Introduced:
+
+* PostgreSQL schema validation
+* database-backed API behavior
+* API-to-database consistency validation
+* query-plan analysis
+* controlled defect detection
+* dependency security gating
+
+### v2.x
+
+Expanded the framework with:
+
+* PostgreSQL audit validation
+* OpenTelemetry trace correlation
+* idempotency and retry safety
+* synthetic healthcare data validation
+* stale-message protection
+* data-quality review queues
+* retry and dead-letter handling
+* performance analysis
+* reliability reporting
+
+### v3.0.0
+
+Added the observability readiness baseline across:
+
+* Docker
+* PostgreSQL
+* FastAPI
+* Prometheus
+* Grafana
+* Jaeger
+* OpenTelemetry Collector
+
+**Current release:** `v3.0.0 — Observability Readiness Baseline`
+
+The complete chronological history, release notes, validation evidence, and associated source changes are available through the repository’s Releases page.
 
 Later development adds audit validation, trace correlation, retry safety, healthcare data-quality workflows, review queues, dead-letter handling, queue metrics, observability readiness, and consolidated reliability reporting.
 
