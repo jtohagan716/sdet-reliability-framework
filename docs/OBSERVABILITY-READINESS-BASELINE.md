@@ -106,7 +106,7 @@ Run it with:
 python -m pytest tests/integration/test_observability_readiness_baseline.py -v
 ```
 
-The test skips safely if Docker or Docker Compose is not available in the execution environment.
+The test skips safely if Docker, Docker Compose, or the expected local observability Docker Compose stack is not available in the execution environment.
 
 This keeps Continuous Integration/Continuous Delivery (CI/CD) behavior deterministic while still allowing local Docker-backed validation.
 
