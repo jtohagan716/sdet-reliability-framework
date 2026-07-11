@@ -1,193 +1,111 @@
-﻿# SDET Reliability Framework
+# SDET Reliability Framework
 
-A reliability-focused Software Development Engineer in Test (SDET) portfolio framework for validating Application Programming Interface (API) behavior, database state, observability evidence, retry safety, release-readiness checks, and healthcare interoperability scenarios.
+A reliability-focused Software Development Engineer in Test (SDET) portfolio project for validating Application Programming Interface (API) behavior, PostgreSQL data, observability evidence, retry safety, healthcare data workflows, performance, accessibility, and release readiness.
 
-This project demonstrates practical, transferable quality engineering skills across:
+The framework demonstrates API and contract testing, Pytest integration testing, PostgreSQL validation, Docker Compose orchestration, OpenTelemetry tracing, audit validation, idempotency, retry and dead-letter behavior, accessibility scanning, performance testing, synthetic healthcare data validation, dependency review, and repeatable release quality gates.
 
-* API validation
-* API contract validation
-* PostgreSQL database validation
-* automated pytest integration tests
-* Docker Compose service orchestration
-* OpenTelemetry trace correlation
-* audit trail validation
-* idempotency and retry safety
-* dependency security review
-* accessibility smoke validation
-* performance and lightweight load testing
-* synthetic Fast Healthcare Interoperability Resources (FHIR)-style validation
-* stale-message protection for healthcare integration workflows
+Its purpose is not merely to prove that successful requests work. It evaluates whether a system behaves safely when exposed to duplicate requests, retries, broken data relationships, stale or out-of-order messages, database inconsistencies, processing failures, and release-quality risks.
 
-The focus is not just proving that happy-path requests work. The focus is proving that a system behaves safely under reliability risks such as retries, duplicate requests, broken healthcare references, out-of-order messages, stale updates, database inconsistency, and release quality gate failures.
+## Project Scope
 
-## Project Purpose
+This is a practice-scale quality engineering and reliability framework. It is not a production healthcare system, complete interoperability platform, formal compliance assessment, or substitute for production security and performance testing.
 
-This project is a practice-scale reliability validation framework.
+The project demonstrates how an application can be:
 
-It is not intended to be a complex business application, a production healthcare system, or a full FHIR server.
+* tested through API, browser, database, and workflow layers
+* backed by deterministic PostgreSQL data
+* observed through logs, metrics, and distributed traces
+* measured through repeatable performance tests
+* protected from duplicate, stale, and conflicting updates
+* evaluated through repeatable release-readiness checks
 
-The purpose is to demonstrate how a system can be validated, observed, measured, tested under lightweight load, checked for accessibility smoke behavior, backed by deterministic PostgreSQL data, reviewed for dependency risk, and evaluated through repeatable release-readiness practices.
+All healthcare-related records and message events are synthetic.
 
-The healthcare interoperability module uses synthetic FHIR-style data to model realistic integration risks without using real patient data.
+## Reliability Coverage
 
-## Current Reliability Scenarios
-
-This framework currently validates:
-
-* PostgreSQL audit validation for encounter changes
-* OpenTelemetry trace correlation from API requests to database behavior
-* idempotency and retry-safety behavior for write-style API operations
-* unsafe idempotency key reuse conflict detection
-* Time To Live cleanup for idempotency records
-* synthetic FHIR-style Patient, Encounter, Observation, and DiagnosticReport reference validation
-* negative FHIR broken-reference detection
-* PostgreSQL-backed FHIR validation evidence
-* stale-message protection for out-of-order healthcare Encounter updates
-* local Docker Compose validation with PostgreSQL, Prometheus, Grafana, Jaeger, and OpenTelemetry Collector
-
-## Healthcare Interoperability Focus
-
-The healthcare interoperability module uses synthetic FHIR-style resources and message events to model validation risks common in health IT integration work.
-
-Current FHIR-related validation includes:
-
-* valid Patient → Encounter → Observation → DiagnosticReport reference chains
-* intentionally broken DiagnosticReport → Observation reference detection
-* PostgreSQL evidence tables for validation run, resource check, and reference check results
-* automated pytest validation of PostgreSQL evidence output
-* stale-message protection where an older partial Encounter message cannot overwrite a newer complete Encounter state
-
-No real patient data, protected health information, personally identifiable information, credentials, secrets, or production data are used.
-
-## What This Project Demonstrates
-
-This project demonstrates:
-
-* Application Programming Interface (API) validation
-* API contract validation
-* automated regression testing
-* Postman/Newman API regression checks
-* Playwright browser and workflow automation
-* Docker-based local runtime validation
-* diagnostic logging
-* request identifier traceability
-* Prometheus metrics
-* OpenTelemetry trace correlation
-* Jaeger trace review
-* performance baseline results
-* lightweight load testing
-* Section 508-oriented accessibility smoke validation
-* axe-core accessibility scan validation
-* PostgreSQL schema and seed data validation
-* PostgreSQL-backed API behavior
-* API-to-database consistency validation
-* PostgreSQL query plan and index validation
-* PostgreSQL audit validation
-* database-backed validation evidence
-* controlled defect detection validation
-* dependency cleanup and dependency security review
-* release quality gate results
-* versioned release documentation
-* synthetic FHIR-style resource validation
-* healthcare reference integrity validation
-* stale-message protection validation
-
-## Local Reliability Stack
-
-The local Docker Compose stack includes:
-
-* FastAPI reliability API
-* PostgreSQL
-* Prometheus
-* Grafana
-* OpenTelemetry Collector
-* Jaeger
-
-The project combines automated tests, SQL validation scripts, documentation, and observable runtime behavior to produce repeatable evidence.
-
-## Release Progression
-
-* **v0.2.0** — REST Application Programming Interface (API) validation and smoke testing
-* **v0.3.0** — Diagnostic logging and request timing
-* **v0.4.0** — Request identifier traceability
-* **v0.5.0** — Prometheus metrics and observability signals
-* **v0.6.0** — Performance baseline results
-* **v0.7.0** — Lightweight load testing
-* **v0.8.0** — Section 508-oriented accessibility smoke validation
-* **v0.9.0** — Release quality gate results
-* **v1.0.0** — Reliability Software Development Engineer in Test (SDET) project baseline
-* **v1.1.0** — Continuous Integration (CI) quality gate expansion
-* **v1.2.0** — Application Programming Interface (API) contract validation
-* **v1.3.0** — Accessibility scan validation
-* **v1.4.0** — PostgreSQL schema and synthetic seed data validation
-* **v1.5.0** — PostgreSQL-backed patient lookup validation
-* **v1.6.0** — API-to-database consistency validation
-* **v1.7.0** — PostgreSQL query plan and index validation
-* **v1.8.0** — Controlled defect detection validation
-* **v1.9.0** — Dependency cleanup and dependency security quality gate
+| Area              | Validation performed                                                                                                                |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| API quality       | Successful responses, invalid input, not-found behavior, contract preservation, payload validation, and API-to-database consistency |
+| PostgreSQL        | Schema, seed data, joins, audit triggers, query plans, indexes, rollback behavior, and stored validation evidence                   |
+| Retry safety      | Idempotent replay, conflicting key reuse, record expiration, retry scheduling, and maximum-attempt enforcement                      |
+| Healthcare data   | Record relationships, broken references, stale updates, out-of-order messages, and preservation of newer state                      |
+| Queue reliability | Review items, retry history, dead-letter transitions, error preservation, backlog age, and processing locks                         |
+| Observability     | Diagnostic logs, request identifiers, Prometheus metrics, OpenTelemetry traces, Jaeger review, and API-to-database correlation      |
+| Performance       | Response-time baselines, concurrency, throughput, error rate, p95 and p99 latency, and query tuning comparisons                     |
+| Accessibility     | Labels, keyboard access, visible feedback, page structure, smoke checks, and axe-core scanning                                      |
+| Release readiness | Integrated automated checks, dependency review, performance thresholds, reports, and pass/fail evidence                             |
 
 ## Technology Stack
 
-* Python
-* FastAPI
-* Pytest
-* PostgreSQL
-* Psycopg
-* Postman
-* Newman
-* Playwright
-* axe-core for Playwright
-* Docker
-* Docker Compose
-* Prometheus
-* Grafana
-* OpenTelemetry
-* Jaeger
-* Git
-* GitHub
-* GitHub Actions
-* PowerShell
-* Markdown documentation
+Python · FastAPI · Pytest · PostgreSQL · Psycopg · Postman · Newman · Playwright · axe-core · Docker · Docker Compose · Prometheus · Grafana · OpenTelemetry · Jaeger · Git · GitHub · GitHub Actions · PowerShell
+
+## Repository Structure
+
+```text
+api_service/    FastAPI application and database access
+db/             PostgreSQL schema and stored database logic
+docs/           Project and validation documentation
+framework/      Reusable testing and reporting components
+monitoring/     Prometheus and Grafana configuration
+otel/           OpenTelemetry Collector configuration
+reports/        Generated validation and release evidence
+scripts/        PowerShell, Python, and SQL validation scripts
+test_data/      Synthetic test fixtures
+tests/          Automated regression and integration tests
+```
+
+## Local Reliability Stack
+
+The Docker Compose environment includes FastAPI, PostgreSQL, Prometheus, Grafana, OpenTelemetry Collector, and Jaeger.
+
+Start the environment:
+
+```powershell
+docker compose up -d --build
+docker compose ps
+```
+
+Primary local ports:
+
+| Service    |  Port |
+| ---------- | ----: |
+| FastAPI    |  8000 |
+| Grafana    |  3000 |
+| Prometheus |  9090 |
+| Jaeger     | 16686 |
+| PostgreSQL |  5432 |
+
+See the ports and protocols documentation for the complete service reference.
 
 ## Main Endpoints
 
-* **`/health`** — Basic service health check
-* **`/patients/1001`** — Synthetic successful patient lookup
-* **`/patients/1002`** — Synthetic secondary patient lookup
-* **`/patients/1003`** — Additional synthetic patient lookup
-* **`/patients/1004`** — Synthetic patient used for database consistency and defect-mode validation
-* **`/patients/9999`** — Expected not-found lookup
-* **`/patients/abc`** — Expected invalid-input response
-* **`/metrics`** — Prometheus metrics endpoint
-* **`/patient-lookup`** — Simple user-facing page for accessibility smoke validation
-* **`/qa/idempotency-validation`** — Local QA endpoint for idempotency and retry-safety validation
-* **`/qa/audit-otel-validation`** — Local QA endpoint for audit and OpenTelemetry trace-correlation validation
+| Endpoint                        | Purpose                                      |
+| ------------------------------- | -------------------------------------------- |
+| `/health`                       | Service-health validation                    |
+| `/patients/1001`                | Successful synthetic patient lookup          |
+| `/patients/1002`                | Secondary synthetic patient lookup           |
+| `/patients/1003`                | Additional synthetic patient lookup          |
+| `/patients/1004`                | Consistency and controlled-defect validation |
+| `/patients/9999`                | Expected not-found response                  |
+| `/patients/abc`                 | Expected invalid-input response              |
+| `/metrics`                      | Prometheus metrics                           |
+| `/patient-lookup`               | Browser-facing accessibility smoke page      |
+| `/qa/idempotency-validation`    | Idempotency and retry-safety validation      |
+| `/qa/audit-otel-validation`     | Audit and trace-correlation validation       |
+| `/qa/data-quality-review-items` | Reviewable healthcare data-quality items     |
 
-## Validation Layers
+## Running the Validation Layers
 
 ### Pytest
 
-Pytest validates backend behavior, Application Programming Interface (API) logic, contract expectations, page structure, workflow logic, security helper behavior, script helper functions, database validation behavior, and synthetic FHIR-style validation scenarios.
-
-Run:
+Pytest validates API behavior, contracts, PostgreSQL logic, audit evidence, retry safety, healthcare data relationships, queue processing, helper functions, controlled failures, and cleanup behavior.
 
 ```powershell
 python -m pytest
+python -m pytest tests/integration -v
 ```
 
-FHIR-focused tests include:
-
-```powershell
-python -m pytest tests/integration/test_fhir_resource_validation.py -v
-python -m pytest tests/integration/test_fhir_postgres_validation_evidence.py -v
-python -m pytest tests/integration/test_fhir_stale_message_protection.py -v
-```
-
-### Newman Application Programming Interface (API) Regression
-
-Newman runs the Postman Application Programming Interface (API) regression collection from the command line.
-
-Run:
+### Newman API Regression
 
 ```powershell
 npm run postman:test
@@ -195,489 +113,309 @@ npm run postman:test
 
 ### Playwright Automation
 
-Playwright validates browser-facing behavior, workflow behavior, and accessibility-oriented checks.
-
-Run:
-
 ```powershell
 npx playwright test
 ```
 
 ### Local Smoke Validation
 
-The local smoke validation script checks Docker, Application Programming Interface (API) health, synthetic patient behavior, Pytest, and Newman together.
-
-Run:
+The smoke script checks Docker availability, API health, patient behavior, Pytest, and Newman.
 
 ```powershell
 .\scripts\local_smoke_validation.ps1
 ```
 
-### Performance Baseline
+## PostgreSQL Validation
 
-The performance baseline script captures normal local response-time and error-rate results.
+### Schema and Seed Data
 
-Run:
-
-```powershell
-python .\scripts\run_performance_baseline.py
-```
-
-### Lightweight Load Test
-
-The lightweight load test script runs a weighted traffic mix with concurrency and captures throughput, response time, p95, p99, and scenario-level results.
-
-Run:
-
-```powershell
-python .\scripts\run_lightweight_load_test.py
-```
-
-### PostgreSQL Schema Validation
-
-The PostgreSQL schema validation script checks that the local database container is running, expected relational tables exist, deterministic seed data is loaded, and representative join behavior returns expected results.
-
-Run:
+Confirms that expected tables exist, deterministic synthetic records are loaded, and representative relational joins return the expected results.
 
 ```powershell
 .\scripts\validate_postgresql_schema.ps1
 ```
 
-### PostgreSQL-Backed Patient Lookup Validation
+### PostgreSQL-Backed API Behavior
 
-The PostgreSQL-backed patient lookup validation confirms that the API can return patient summary data from PostgreSQL while preserving the external API contract.
-
-Run:
+Confirms that patient information is retrieved from PostgreSQL while preserving the external API contract.
 
 ```powershell
 .\scripts\validate_postgresql_patient_lookup.ps1
 ```
 
-### API-to-Database Consistency Validation
+### API-to-Database Consistency
 
-The API-to-database consistency validation compares API responses against direct PostgreSQL query results.
-
-Run:
+Compares API responses with direct PostgreSQL query results to detect incorrect rows, unexpected transformations, and controlled defects.
 
 ```powershell
 .\scripts\validate_api_database_consistency.ps1
 ```
 
-### PostgreSQL Query Plan and Index Validation
+### Query Plan and Index Validation
 
-The query plan validation checks that expected database indexes exist and that query plan evidence can be captured for patient lookup behavior.
-
-Run:
+Captures PostgreSQL execution plans and verifies expected indexes.
 
 ```powershell
 .\scripts\validate_patient_lookup_query_plan.ps1
 ```
 
-### PostgreSQL Audit Validation
+The project measures query behavior before tuning, applies targeted changes, and records an honest pre-tuning and post-tuning comparison.
 
-The PostgreSQL audit validation checks encounter audit behavior for insert and update actions.
+### Audit Validation
 
-It verifies that audit rows capture change metadata and supports trace-correlation evidence through OpenTelemetry-related fields.
-
-Run the SQL validation script through Docker Compose:
+The encounter audit validation checks insert and update behavior and verifies operation type, old and new values, change source, changed-by metadata, timestamps, and trace-correlation fields.
 
 ```powershell
-Get-Content scripts\validate_encounter_audit.sql | docker compose exec -T postgres psql -x -U sdet_user -d sdet_reliability
-```
+Get-Content scripts\validate_encounter_audit.sql |
+    docker compose exec -T postgres psql -x -U sdet_user -d sdet_reliability
 
-Run the automated integration test:
-
-```powershell
 python -m pytest tests/integration/test_encounter_audit_validation.py -v
 ```
 
-### Idempotency and Retry-Safety Validation
+Audit tests run inside a transaction and roll back their changes so repeated executions do not leave test records behind.
 
-The idempotency validation proves that write-style API retry behavior is safe.
+## Idempotency and Retry Safety
 
-Core behavior:
+The idempotency scenario validates safe handling of repeated write requests:
 
 ```text
-Same idempotency key + same request:
-  replay the original stored response
+Same idempotency key and same request:
+Return the original stored response.
 
-Same idempotency key + different request:
-  reject as a conflict
+Same idempotency key and different request:
+Reject the request as a conflict.
 ```
 
-Run:
+Validation also covers request fingerprints, response replay, conflict detection, expiration, Time To Live cleanup, and deterministic test cleanup.
 
 ```powershell
 python -m pytest tests/integration/test_idempotency_validation.py -v
 ```
 
-### FHIR Reference Validation
+## Healthcare Data Reliability
 
-The FHIR reference validation checks synthetic Patient, Encounter, Observation, and DiagnosticReport fixtures.
+Synthetic patient, encounter, observation, and diagnostic records model common data-quality and integration risks.
 
-It validates:
+Validation includes:
 
-* expected `resourceType` values
-* valid cross-resource references
-* absence of unresolved references in the valid fixture set
-* detection of an intentionally broken DiagnosticReport → Observation reference
+* expected record types
+* valid cross-record relationships
+* missing and intentionally broken references
+* PostgreSQL-backed validation findings
+* append-only message history
+* stale and out-of-order message detection
+* preservation of newer and more complete record state
+* data-quality review items
+* retry and dead-letter handling
 
-Run:
+No real patient data, protected health information, personally identifiable information, production credentials, secrets, or production records are used.
 
-```powershell
-python -m pytest tests/integration/test_fhir_resource_validation.py -v
-```
-
-### FHIR PostgreSQL Validation Evidence
-
-The PostgreSQL FHIR validation evidence script proves that FHIR-style validation findings can be represented as queryable database evidence.
-
-Run:
-
-```powershell
-Get-Content scripts\validate_fhir_reference_validation_evidence.sql | docker compose exec -T postgres psql -x -U sdet_user -d sdet_reliability
-```
-
-Run the automated integration test:
-
-```powershell
-python -m pytest tests/integration/test_fhir_postgres_validation_evidence.py -v
-```
-
-### FHIR Stale Message Protection
-
-The stale-message protection validation models an out-of-order healthcare Encounter update scenario.
-
-Scenario:
+### Stale-Message Scenario
 
 ```text
-Message 2 arrives first:
-  sequence_number = 2
-  status = finished
-  completeness = complete
+Newer message arrives first:
+sequence number = 2
+status = finished
+completeness = complete
 
-Message 1 arrives second:
-  sequence_number = 1
-  status = in-progress
-  completeness = partial
-
-Expected:
-  sequence 2 remains current
-  older partial message is marked stale
-  newer complete state is not overwritten
+Older message arrives second:
+sequence number = 1
+status = in-progress
+completeness = partial
 ```
 
-Run:
+Expected behavior:
+
+* sequence 2 remains current
+* the older message is marked stale
+* the partial state does not overwrite the newer complete state
+* message history and the stale decision are preserved
+* a review item can be created when human attention is appropriate
+
+This demonstrates that successful message processing is insufficient unless the resulting state also remains correct.
+
+## Data-Quality Review Queue
+
+Validation covers creation and management of reviewable healthcare data-quality items, including source linkage, status, priority, reviewer notes, action history, and preservation of the original reason for review.
+
+The workflow provides a traceable path from automated detection to human review.
+
+## Retry and Dead-Letter Processing
+
+Queue reliability scenarios validate:
+
+* retry scheduling
+* attempt tracking
+* maximum-attempt enforcement
+* next-attempt timestamps
+* processing locks
+* preserved error details
+* dead-letter transitions
+* queue and action history
+
+The goal is to prove that failed work is neither retried indefinitely nor discarded without useful evidence.
+
+## Queue Health Metrics
+
+Operational measurements include:
+
+* total queue depth
+* status distribution
+* pending and retrying work
+* dead-letter count
+* oldest backlog age
+* stale processing-lock age
+* action-history totals
+
+These measurements help distinguish a queue that is technically running from one that is healthy and supportable.
+
+## Observability
+
+The framework combines:
+
+* structured diagnostic logging
+* request identifiers
+* Prometheus metrics
+* OpenTelemetry tracing
+* Jaeger trace review
+* API-to-database trace correlation
+* service-readiness checks
+* queue-health reporting
+* consolidated reliability summaries
+
+Observability evidence is used to explain what happened during a test, not merely whether the test passed.
+
+## Performance Validation
+
+### Performance Baseline
 
 ```powershell
-python -m pytest tests/integration/test_fhir_stale_message_protection.py -v
+python .\scripts\run_performance_baseline.py
 ```
 
-### Controlled Defect Detection Validation
+Captures request count, successful and failed requests, mean and median response time, p95 and p99 latency, and error rate.
 
-The controlled defect detection validation intentionally enables a known defect mode, verifies that the API-to-database consistency check detects the defect, and restores normal behavior.
+### Lightweight Load Test
 
-Run:
+```powershell
+python .\scripts\run_lightweight_load_test.py
+```
+
+Runs a weighted traffic mix with concurrency and records throughput, latency distribution, error rate, and scenario-level results.
+
+These tests provide repeatable local evidence. They are not presented as enterprise-scale production capacity results.
+
+## Controlled Defect Detection
+
+A known inconsistency can be enabled deliberately so the API-to-database validation proves that it detects a meaningful failure.
 
 ```powershell
 .\scripts\validate_controlled_defect_detection.ps1
 ```
 
-This validation is intentionally separate from the default release gate because it toggles defect behavior and recreates the API container.
+The process then restores normal behavior. It remains separate from the default release gate because it intentionally modifies the runtime configuration.
 
-### Dependency Security Quality Gate
-
-The dependency security quality gate validates Python dependency health, Python vulnerability status, and Node dependency audit posture.
-
-Run:
+## Dependency Security
 
 ```powershell
 .\scripts\validate_dependency_security.ps1
 ```
 
-The script treats Python dependency health, Python vulnerability audit, and Node production/runtime audit as blocking checks.
+Current policy:
 
-The full Node development/test-tooling audit is advisory because current Newman/Postman transitive findings require impact analysis rather than a breaking forced downgrade.
+* Python dependency health is blocking.
+* Python vulnerability findings are blocking.
+* Node production and runtime findings are blocking.
+* Development and test-tooling findings may remain advisory when remediation requires impact analysis.
+* Breaking forced upgrades are not applied without review.
 
-### Release Quality Gate
+This keeps known findings visible without introducing unreviewed dependency changes that could destabilize the project.
 
-The release quality gate script runs the major validation checks and generates release-readiness results.
-
-Run:
+## Release Quality Gate
 
 ```powershell
 .\scripts\run_release_quality_gate.ps1
 ```
 
-Optional controlled defect validation can be included with:
+Optional controlled-defect execution:
 
 ```powershell
 .\scripts\run_release_quality_gate.ps1 -IncludeControlledDefectValidation
 ```
 
-## Reports
+The gate combines API, database, Pytest, Newman, Playwright, accessibility, performance, dependency, and reporting checks into one repeatable release-readiness decision.
 
-Key generated reports include:
+## Reports and Documentation
 
-### Performance and Load Testing
+Generated evidence is stored under `reports/`. Project explanations and validation procedures are stored under `docs/`.
 
-* `reports/performance_baseline_v0.6.0.md`
-  Initial performance baseline results.
+Coverage includes:
 
-* `reports/lightweight_load_test_v0.7.0.md`
-  Initial lightweight load test results.
+| Category          | Examples                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------ |
+| Performance       | Baselines, load tests, endpoint timing, query comparisons                                  |
+| Accessibility     | Smoke validation and automated scan results                                                |
+| PostgreSQL        | Schema, seed data, consistency, query plans, indexes, and audits                           |
+| Reliability       | Idempotency, stale messages, queue behavior, controlled defects, and observability         |
+| Release readiness | Integrated quality gates, dependency results, and versioned evidence                       |
+| Healthcare data   | Reference integrity, stored findings, review queues, message history, and failure recovery |
 
-* `reports/performance_baseline_quality_gate_v0.9.0.md`
-  Initial quality-gate-specific performance baseline results.
+Generated reports describe results from the documented local environment and test conditions. They are not universal production-performance or compliance claims.
 
-* `reports/lightweight_load_test_quality_gate_v0.9.0.md`
-  Initial quality-gate-specific lightweight load test results.
+## Selected Release Milestones
 
-* `reports/performance_baseline_quality_gate_v1.9.0.md`
-  v1.9.0 quality-gate-specific performance baseline results.
+| Version | Milestone                                     |
+| ------- | --------------------------------------------- |
+| v0.2.0  | API validation and smoke testing              |
+| v0.3.0  | Diagnostic logging and request timing         |
+| v0.4.0  | Request identifier traceability               |
+| v0.5.0  | Prometheus metrics                            |
+| v0.6.0  | Performance baselines                         |
+| v0.7.0  | Lightweight load testing                      |
+| v0.8.0  | Accessibility smoke validation                |
+| v0.9.0  | Release quality gate                          |
+| v1.0.0  | Reliability SDET baseline                     |
+| v1.1.0  | Continuous Integration quality-gate expansion |
+| v1.2.0  | API contract validation                       |
+| v1.3.0  | Automated accessibility scanning              |
+| v1.4.0  | PostgreSQL schema and seed-data validation    |
+| v1.5.0  | PostgreSQL-backed patient lookup              |
+| v1.6.0  | API-to-database consistency                   |
+| v1.7.0  | Query-plan and index validation               |
+| v1.8.0  | Controlled defect detection                   |
+| v1.9.0  | Dependency security quality gate              |
 
-* `reports/lightweight_load_test_quality_gate_v1.9.0.md`
-  v1.9.0 quality-gate-specific lightweight load test results.
+Later development adds audit validation, trace correlation, retry safety, healthcare data-quality workflows, review queues, dead-letter handling, queue metrics, observability readiness, and consolidated reliability reporting.
 
-### Accessibility
+## Testing and Accessibility Reference Points
 
-* `reports/accessibility_smoke_v0.8.0.md`
-  Section 508-oriented accessibility smoke report.
+The project reinforces testing concepts commonly covered by the International Software Testing Qualifications Board (ISTQB) Certified Tester Foundation Level (CTFL), including regression testing, confirmation testing, risk-based testing, acceptance and exit criteria, test evidence, defect detection, and release readiness.
 
-### Release Quality Gates
+It also applies practical accessibility considerations associated with Section 508-oriented testing, including labels, keyboard access, visible feedback, page structure, automated scanning, and accessibility checks within release workflows.
 
-* `reports/release_quality_gate_v0.9.0.md`
-  Initial release quality gate results.
+These references provide educational and technical context. They do not represent formal certification, a compliance determination, government approval, agency endorsement, or alignment with the requirements of a particular organization.
 
-* `reports/release_quality_gate_v1.9.0.md`
-  Integrated v1.9.0 release quality gate results.
+## Data Safety and Limitations
 
-### PostgreSQL Validation
+All project data is synthetic. The repository does not use real patient data, protected health information, personally identifiable information, production credentials, secrets, or production database records.
 
-* `reports/postgresql_schema_seed_data_v1.4.0.md`
-  PostgreSQL schema and seed data validation results.
-
-* `reports/postgresql_backed_patient_lookup_v1.5.0.md`
-  PostgreSQL-backed patient lookup validation results.
-
-* `reports/api_database_consistency_validation_v1.6.0.md`
-  API-to-database consistency validation results.
-
-* `reports/postgresql_query_plan_index_validation_v1.7.0.md`
-  PostgreSQL query plan and index validation results.
-
-* `reports/postgresql_query_plan_index_comparison_v1.7.0.md`
-  PostgreSQL query plan index comparison results.
-
-### Defect Detection and Dependency Review
-
-* `reports/controlled_defect_detection_v1.8.0.md`
-  Controlled defect detection validation results.
-
-* `reports/dependency_security_quality_gate_v1.9.0.md`
-  Dependency cleanup and dependency security quality gate report.
-
-## Documentation
-
-Key documentation includes:
-
-### Project and Release Process
-
-* [Project Walkthrough](docs/PROJECT_WALKTHROUGH.md)
-  Reviewer-friendly explanation of the project.
-
-* [Release Quality Gates](docs/RELEASE_QUALITY_GATES.md)
-  Release quality gate documentation.
-
-* [Dependency Security Quality Gate](docs/DEPENDENCY_SECURITY_QUALITY_GATE.md)
-  Dependency cleanup and dependency security quality gate documentation.
-
-### Accessibility and Performance
-
-* [Section 508 Accessibility](docs/SECTION_508_ACCESSIBILITY.md)
-  Section 508-oriented accessibility smoke validation.
-
-* [Accessibility Scan Validation](docs/ACCESSIBILITY_SCAN_VALIDATION.md)
-  Accessibility scan validation documentation.
-
-* [Lightweight Load Testing](docs/LIGHTWEIGHT_LOAD_TESTING.md)
-  Lightweight load testing documentation.
-
-* [Performance Baseline](docs/PERFORMANCE_BASELINE.md)
-  Performance baseline documentation.
-
-* [Metrics and Performance Baseline](docs/METRICS_AND_PERFORMANCE_BASELINE.md)
-  Metrics and baseline foundation.
-
-* [Portfolio Review Guide](docs/PORTFOLIO_REVIEW_GUIDE.md)  
-  Reviewer-focused guide showing how the project demonstrates API behavior, database validation, audit evidence, observability, retry safety, and healthcare-style data quality validation.
-
-### Observability and Runtime Diagnostics
-
-* [Request ID Traceability](docs/REQUEST_ID_TRACEABILITY.md)
-  Request identifier traceability.
-
-* [Diagnostic Logging](docs/DIAGNOSTIC_LOGGING.md)
-  Diagnostic logging and request timing.
-
-* [Observability and OpenTelemetry](docs/OBSERVABILITY.md)
-  OpenTelemetry, Jaeger, and trace-correlation documentation.
-
-* [Ports and Protocols](docs/PORTS-AND-PROTOCOLS.md)
-  Local service ports and protocol reference.
-
-### PostgreSQL and Reliability Validation
-
-* [PostgreSQL Schema](docs/POSTGRESQL_SCHEMA.md)
-  PostgreSQL schema and seed data documentation.
-
-* [PostgreSQL Audit Validation](docs/AUDIT-VALIDATION.md)
-  Encounter audit validation and database evidence.
-
-* [Idempotency and Retry Safety](docs/IDEMPOTENCY-AND-RETRY-SAFETY.md)
-  Idempotency key validation, replay behavior, conflict detection, and cleanup.
-
-### Healthcare Interoperability
-
-* [FHIR Interoperability Roadmap](docs/FHIR-INTEROPERABILITY-ROADMAP.md)
-  Healthcare interoperability roadmap for synthetic FHIR-style validation.
-
-* [FHIR Reference Validation](docs/FHIR-REFERENCE-VALIDATION.md)
-  Positive and negative synthetic FHIR reference validation.
-
-* [FHIR PostgreSQL Validation Evidence](docs/FHIR-POSTGRES-VALIDATION-EVIDENCE.md)
-  PostgreSQL-backed evidence for FHIR validation findings.
-
-* [FHIR Stale Message Protection](docs/FHIR-STALE-MESSAGE-PROTECTION.md)
-  Out-of-order healthcare message handling and stale-update protection.
-
-  - [FHIR Stale Message PostgreSQL Evidence](docs/FHIR-STALE-MESSAGE-POSTGRES-EVIDENCE.md)  
-  PostgreSQL-backed evidence for append-only message history, protected current Encounter state, and archived stale-message decisions.
-
-  - [Patient Data Quality Review Queue](docs/PATIENT-DATA-QUALITY-REVIEW-QUEUE.md)  
-  Documents how stale-message decisions can create reviewable patient data quality items with preserved review action history.
-
-  - [Data Quality Work Queue Retry and Dead-Letter Validation](docs/DATA-QUALITY-WORK-QUEUE-RETRY-DEAD-LETTER.md)  
-  Documents retry scheduling, max-attempt enforcement, dead-letter handling, error preservation, and queue failure history validation.
-
-- [Query Performance Baseline Validation](docs/QUERY-PERFORMANCE-BASELINE.md)  
-  Documents the first PostgreSQL query performance baseline, including EXPLAIN ANALYZE evidence, timing capture, queue linkage validation, and the decision to measure before tuning.  
-
-- [Query Performance Tuning Comparison](docs/QUERY-PERFORMANCE-TUNING-COMPARISON.md)  
-  Documents pre/post PostgreSQL query tuning evidence, targeted composite index validation, execution-plan comparison, and honest interpretation of local synthetic performance results.
-
-- [API Endpoint Performance Baseline](docs/API-ENDPOINT-PERFORMANCE-BASELINE.md)  
-  Documents API-layer response-time baseline validation for `/health` and `/qa/data-quality-review-items`, including request count, status codes, mean/median/p95 latency, payload size, and cleanup evidence.
-
-- [Queue Performance Metrics Baseline](docs/QUEUE-PERFORMANCE-METRICS-BASELINE.md)  
-  Documents queue health baseline validation, including queue depth, status distribution, retry pressure, dead-letter visibility, backlog age, processing lock age, and history action metrics.
-
-  - [Reliability Health Summary Report](docs/RELIABILITY-HEALTH-SUMMARY.md)  
-  Documents the consolidated reliability health report across query performance, tuning comparison, API endpoint baseline, and queue health metrics.
-
-  - [Observability Readiness Baseline](docs/OBSERVABILITY-READINESS-BASELINE.md)  
-  Documents Docker, PostgreSQL, API, Prometheus, Grafana, Jaeger, and OpenTelemetry Collector readiness validation.
-
-## Synthetic FHIR Test Data
-
-FHIR-style synthetic fixtures are stored under:
-
-```text
-test_data/fhir/
-```
-
-Current fixture areas include:
-
-```text
-test_data/fhir/patient-example.json
-test_data/fhir/encounter-example.json
-test_data/fhir/observation-example.json
-test_data/fhir/diagnosticreport-example.json
-test_data/fhir/invalid/
-test_data/fhir/message_events/
-```
-
-The initial resource chain is:
-
-```text
-Patient/example-patient-001
-  -> Encounter/example-encounter-001
-    -> Observation/example-observation-001
-      -> DiagnosticReport/example-diagnosticreport-001
-```
-
-The stale-message scenario uses synthetic Encounter message events to prove that an older partial message cannot overwrite a newer complete Encounter state.
-
-## Dependency Security Notes
-
-The project dependency set was cleaned during v1.9.0.
-
-The Python dependency file was reduced to intentional project dependencies, and an initial Python audit finding was remediated by updating `pytest`.
-
-The current dependency security process separates blocking checks from advisory findings.
-
-Current policy:
-
-* Python dependency health is blocking.
-* Python vulnerability audit is blocking.
-* Node production/runtime audit is blocking.
-* Full Node development/test-tooling audit is advisory.
-* Newman/Postman transitive audit findings are documented and monitored.
-* Breaking forced dependency fixes are not applied without impact analysis.
-
-## Testing and Certification Alignment
-
-This project reinforces concepts from the International Software Testing Qualifications Board (ISTQB) Certified Tester Foundation Level (CTFL), including:
-
-* regression testing
-* confirmation testing
-* test results
-* acceptance criteria
-* exit criteria
-* test completion criteria
-* risk-based testing
-* release readiness
-
-It also reinforces Department of Homeland Security (DHS) / Section 508 accessibility awareness, including:
-
-* accessible labels
-* keyboard reachability
-* visible feedback
-* page structure
-* accessibility as part of release readiness
-
-This project does not claim full Section 508 certification. It includes Section 508-oriented accessibility smoke validation and automated accessibility scan validation that can be expanded later.
-
-## Data Safety
-
-All project data is synthetic.
-
-No real patient data, protected health information, personally identifiable information, credentials, secrets, or production data are used.
-
-## Current Scope
-
-This is a practice-scale project.
-
-It is designed to demonstrate modern quality engineering and reliability validation practices in a controlled, explainable environment.
-
-It is not intended to represent a full enterprise production system, full production healthcare system, or full FHIR implementation.
+The framework is designed to be locally executable, repeatable, inspectable, and explainable. It does not reproduce the scale, security model, availability requirements, or regulatory responsibilities of a production enterprise system.
 
 ## Future Improvements
 
-Planned or possible future improvements include:
-
-* add PostgreSQL evidence for stale-message decisions
-* add validation run cleanup strategy
-* generate validation evidence from Python instead of static SQL
-* add local HAPI FHIR server validation
-* add Synthea-generated synthetic FHIR data
-* add OpenTelemetry trace correlation for FHIR validation workflows
-* add dependency security validation to GitHub Actions
-* add Dependabot configuration
+* expand automated PostgreSQL evidence generation
+* add larger generated synthetic healthcare datasets
+* extend healthcare data-quality and recovery scenarios
+* correlate additional workflows through OpenTelemetry
+* add dependency checks and Dependabot to GitHub Actions
 * generate a Software Bill of Materials
-* add accepted-risk review dates for advisory dependency findings
-* evaluate alternatives to Newman if transitive audit findings remain unresolved
-* performance threshold enforcement
-* baseline comparison reports
-* expanded accessibility testing
-* Department of Homeland Security (DHS) Trusted Tester study alignment
+* track accepted dependency risks and review dates
+* expand historical performance comparison and threshold enforcement
+* add queue saturation and recovery testing
+* broaden accessibility coverage using publicly available guidance
+* add additional controlled failure scenarios
+* strengthen Continuous Integration environment-drift detection
+
+## Project Principle
+
+Reliable testing should produce more than a passing result. It should create repeatable evidence showing what was tested, what was expected, what occurred, what data changed, what evidence was captured, what failed, why it failed, whether cleanup succeeded, and whether the system is ready to proceed.
