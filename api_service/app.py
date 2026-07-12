@@ -20,6 +20,7 @@ from api_service.repositories.data_quality_reviews import (
     get_review_item_detail,
     list_review_items,
 )
+from api_service.database_timings import DatabasePhaseTimings
 
 
 TRUSTED_ISSUER = "https://company-login.com"
@@ -558,6 +559,35 @@ async def validate_idempotency_behavior(
                 "replayed": False,
                 "replayed_count": replayed_count,
             }
+@app.get("/qa/database-connection-timing")
+def database_connection_timing(
+    patient_id: int = 1001,
+):
+    if os.getenv("ENABLE_QA_ENDPOINTS", "false").lower() != "true":
+        raise HTTPException(
+            status_code=404,
+            detail="QA endpoints are disabled",
+        )
+
+    timings = DatabasePhaseTimings()
+
+    patient = get_patient_summary_from_postgres(
+        patient_id,
+        defect_mode=PATIENT_LOOKUP_DEFECT_MODE,
+        timings=timings,
+    )
+
+    if patient is None:
+        raise HTTPException(
+            status_code=404,
+            detail="PATIENT_NOT_FOUND",
+        )
+
+    return {
+        "patient_id": patient_id,
+        "connection_strategy": "connection_per_operation",
+        "database_phases": timings.as_dict(),
+    }
 
 @app.get(
     "/patients/{patient_id}",
