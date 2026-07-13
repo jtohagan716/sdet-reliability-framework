@@ -451,7 +451,7 @@ def build_summary(
                 int(row["requests_waiting"])
                 for row in pool_rows
             ),
-            "maximum_requests_queued": max(
+            "highest_cumulative_requests_queued_since_api_start": max(
                 int(row["requests_queued"] or 0)
                 for row in pool_rows
             ),
@@ -566,8 +566,8 @@ def write_markdown_report(
                     f"{pool['maximum_requests_waiting']}"
                 ),
                 (
-                    "- Maximum requests queued: "
-                    f"{pool['maximum_requests_queued']}"
+                    "- Highest cumulative requests queued since API start: "
+                    f"{pool['highest_cumulative_requests_queued_since_api_start']}"
                 ),
             ]
         )

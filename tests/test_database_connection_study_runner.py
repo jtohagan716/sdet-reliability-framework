@@ -205,5 +205,5 @@ def test_build_summary_reports_pool_observations():
         "maximum_pool_size": 8,
         "minimum_available": 0,
         "maximum_requests_waiting": 2,
-        "maximum_requests_queued": 5,
+        "highest_cumulative_requests_queued_since_api_start": 5,
     }
