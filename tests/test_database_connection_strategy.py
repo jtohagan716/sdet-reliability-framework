@@ -8,7 +8,7 @@ from api_service.database import (
 )
 
 
-def test_connection_per_operation_is_default(monkeypatch):
+def test_bounded_pool_is_default(monkeypatch):
     monkeypatch.delenv(
         "DATABASE_CONNECTION_STRATEGY",
         raising=False,
@@ -16,7 +16,7 @@ def test_connection_per_operation_is_default(monkeypatch):
 
     assert (
         get_database_connection_strategy()
-        == CONNECTION_PER_OPERATION
+        == BOUNDED_POOL
     )
 
 

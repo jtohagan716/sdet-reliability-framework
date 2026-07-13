@@ -35,7 +35,7 @@ def test_database_connection_timing_endpoint_reports_valid_phases():
     assert payload["patient_id"] == 1001
     expected_strategy = os.getenv(
         "DATABASE_CONNECTION_STRATEGY",
-        "connection_per_operation",
+        "bounded_pool",
     ).strip().lower()
 
     assert (

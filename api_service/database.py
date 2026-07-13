@@ -83,7 +83,7 @@ def _get_float_setting(
 def get_database_connection_strategy() -> str:
     strategy = os.getenv(
         "DATABASE_CONNECTION_STRATEGY",
-        CONNECTION_PER_OPERATION,
+        BOUNDED_POOL,
     ).strip().lower()
 
     if strategy not in SUPPORTED_CONNECTION_STRATEGIES:
