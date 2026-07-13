@@ -41,3 +41,14 @@ reports/playwright_observability_results.json
 docs/RESUME_BULLET_BANK.md
 private/
 career-notes/
+
+# Database connection study - generated evidence
+reports/*-api.log
+reports/*-client.csv
+reports/*-client-summary.json
+reports/*-correlated.csv
+reports/*-correlation-summary.json
+reports/connection_per_request*.log
+reports/connection_per_request*.csv
+reports/latest_correlated_run_id.txt
+reports/test-runs/
