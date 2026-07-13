@@ -33,18 +33,45 @@ def test_database_connection_timing_endpoint_reports_valid_phases():
     payload = response.json()
 
     assert payload["patient_id"] == 1001
+    expected_strategy = os.getenv(
+        "DATABASE_CONNECTION_STRATEGY",
+        "connection_per_operation",
+    ).strip().lower()
+
     assert (
         payload["connection_strategy"]
-        == "connection_per_operation"
+        == expected_strategy
     )
+
+    resources = payload["database_resources"]
+
+    assert (
+        resources["connection_strategy"]
+        == expected_strategy
+    )
+
+    if expected_strategy == "bounded_pool":
+        pool = resources["pool"]
+
+        assert pool is not None
+        assert pool["open"] is True
+        assert pool["name"] == "interactive-api-pool"
+        assert pool["configuration"]["min_size"] >= 1
+        assert (
+            pool["configuration"]["max_size"]
+            >= pool["configuration"]["min_size"]
+        )
+        assert isinstance(pool["statistics"], dict)
+    else:
+        assert resources["pool"] is None
 
     phases = payload["database_phases"]
 
     expected_phase_names = {
-        "connect_ms",
+        "acquire_ms",
         "query_ms",
         "fetch_ms",
-        "close_ms",
+        "release_ms",
         "total_ms",
     }
 
@@ -55,10 +82,10 @@ def test_database_connection_timing_endpoint_reports_valid_phases():
         assert phases[phase_name] >= 0
 
     measured_phase_total = (
-        phases["connect_ms"]
+        phases["acquire_ms"]
         + phases["query_ms"]
         + phases["fetch_ms"]
-        + phases["close_ms"]
+        + phases["release_ms"]
     )
 
     # Allow a small rounding margin because values are rounded

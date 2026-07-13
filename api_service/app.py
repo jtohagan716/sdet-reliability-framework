@@ -5,6 +5,7 @@ import time
 import uuid
 import hashlib
 import json
+from contextlib import asynccontextmanager
 from datetime import datetime, UTC
 from fastapi.responses import HTMLResponse
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
@@ -13,7 +14,12 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from framework.security.jwt_decoder import decode_jwt
 from framework.security.jwt_inspector import inspect_jwt
-from api_service.database import get_connection
+from api_service.database import (
+    close_database_resources,
+    get_connection,
+    get_database_resource_status,
+    initialize_database_resources,
+)
 from api_service.repositories.patients import get_patient_summary_from_postgres
 from api_service.repositories.data_quality_reviews import (
     VALID_REVIEW_STATUSES,
@@ -48,9 +54,20 @@ PATIENT_LOOKUP_TOTAL = Counter(
 )
 
 
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    initialize_database_resources()
+
+    try:
+        yield
+    finally:
+        close_database_resources()
+
+
 app = FastAPI(
     title="Synthetic Echo Service",
     description="Controlled test service for reliability and latency simulation.",
+    lifespan=lifespan,
 )
 
 if os.getenv("OTEL_ENABLED", "false").lower() == "true":
@@ -583,10 +600,15 @@ def database_connection_timing(
             detail="PATIENT_NOT_FOUND",
         )
 
+    resource_status = get_database_resource_status()
+
     return {
         "patient_id": patient_id,
-        "connection_strategy": "connection_per_operation",
+        "connection_strategy": resource_status[
+            "connection_strategy"
+        ],
         "database_phases": timings.as_dict(),
+        "database_resources": resource_status,
     }
 
 @app.get(
