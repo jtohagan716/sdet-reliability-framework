@@ -136,6 +136,7 @@ def test_build_summary_reports_direct_strategy_results():
         rows=rows,
         run_id="direct-test-run",
         strategy="connection_per_operation",
+        configuration_label="direct",
         mode="warm",
         request_count=2,
         concurrency=1,
@@ -144,6 +145,7 @@ def test_build_summary_reports_direct_strategy_results():
         api_log_line_count=6,
     )
 
+    assert summary["configuration_label"] == "direct"
     assert summary["success_count"] == 2
     assert summary["failure_count"] == 0
     assert summary["pool_observations"] is None
@@ -193,6 +195,7 @@ def test_build_summary_reports_pool_observations():
         rows=rows,
         run_id="pool-test-run",
         strategy="bounded_pool",
+        configuration_label="dynamic-4-8",
         mode="warm",
         request_count=2,
         concurrency=1,

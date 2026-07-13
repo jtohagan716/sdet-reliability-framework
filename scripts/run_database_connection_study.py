@@ -387,6 +387,7 @@ def build_summary(
     rows: list[dict[str, Any]],
     run_id: str,
     strategy: str,
+    configuration_label: str,
     mode: str,
     request_count: int,
     concurrency: int,
@@ -460,6 +461,7 @@ def build_summary(
     return {
         "run_id": run_id,
         "strategy": strategy,
+        "configuration_label": configuration_label,
         "mode": mode,
         "starting_state_run_id": starting_state_run_id,
         "request_count": request_count,
@@ -503,6 +505,10 @@ def write_markdown_report(
         "",
         f"- Run ID: `{summary['run_id']}`",
         f"- Strategy: `{summary['strategy']}`",
+        (
+            "- Configuration: "
+            f"`{summary['configuration_label']}`"
+        ),
         f"- Mode: `{summary['mode']}`",
         (
             "- Starting-state run: "
@@ -585,6 +591,15 @@ def main() -> None:
         "--expected-strategy",
         required=True,
         choices=sorted(SUPPORTED_STRATEGIES),
+    )
+
+    parser.add_argument(
+        "--configuration-label",
+        required=True,
+        help=(
+            "Stable label identifying the tested configuration, "
+            "for example direct, dynamic-4-8, or fixed-8."
+        ),
     )
 
     parser.add_argument(
@@ -676,9 +691,22 @@ def main() -> None:
         arguments.expected_strategy,
     )
 
+    normalized_label = (
+        arguments.configuration_label
+        .strip()
+        .lower()
+        .replace("_", "-")
+        .replace(" ", "-")
+    )
+
+    if not normalized_label:
+        raise ValueError(
+            "--configuration-label cannot be empty"
+        )
+
     run_id = utc_now().strftime(
         "database-connection-"
-        f"{arguments.expected_strategy}-"
+        f"{normalized_label}-"
         f"{arguments.mode}-"
         "%Y%m%dT%H%M%S%fZ"
     )
@@ -761,6 +789,7 @@ def main() -> None:
         rows=rows,
         run_id=run_id,
         strategy=arguments.expected_strategy,
+        configuration_label=normalized_label,
         mode=arguments.mode,
         request_count=arguments.request_count,
         concurrency=arguments.concurrency,
