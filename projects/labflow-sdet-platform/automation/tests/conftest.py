@@ -1,6 +1,7 @@
 import os
 import uuid
 from collections.abc import Generator
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import psycopg
@@ -94,7 +95,105 @@ def db_connection(
     finally:
         connection.rollback()
         connection.close()
+@pytest.fixture
+def clinical_context(
+    database_url: str,
+) -> Generator[dict[str, uuid.UUID | str], None, None]:
+    patient_id = uuid.uuid4()
+    encounter_id = uuid.uuid4()
+    unique_suffix = uuid.uuid4().hex[:8]
 
+    synthetic_patient_id = f"SYN-CLINICAL-{unique_suffix}"
+    encounter_number = f"ENC-CLINICAL-{unique_suffix}"
+
+    connection = psycopg.connect(
+        database_url,
+        autocommit=True,
+    )
+
+    try:
+        connection.execute(
+            """
+            INSERT INTO core.patients (
+                id,
+                synthetic_patient_id,
+                first_name,
+                last_name,
+                date_of_birth,
+                sex
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (
+                patient_id,
+                synthetic_patient_id,
+                "Jordan",
+                "Taylor",
+                date(1988, 6, 15),
+                "UNKNOWN",
+            ),
+        )
+
+        connection.execute(
+            """
+            INSERT INTO core.encounters (
+                id,
+                encounter_number,
+                patient_id,
+                encounter_type,
+                facility_code,
+                status,
+                admitted_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                encounter_id,
+                encounter_number,
+                patient_id,
+                "OUTPATIENT",
+                "FAC-AUTO-001",
+                "OPEN",
+                datetime(
+                    2026,
+                    7,
+                    16,
+                    14,
+                    0,
+                    tzinfo=timezone.utc,
+                ),
+            ),
+        )
+
+        yield {
+            "patient_id": patient_id,
+            "encounter_id": encounter_id,
+            "synthetic_patient_id": synthetic_patient_id,
+            "encounter_number": encounter_number,
+        }
+    finally:
+        connection.execute(
+            """
+            DELETE FROM lab_orders
+            WHERE encounter_id = %s
+            """,
+            (encounter_id,),
+        )
+        connection.execute(
+            """
+            DELETE FROM core.encounters
+            WHERE id = %s
+            """,
+            (encounter_id,),
+        )
+        connection.execute(
+            """
+            DELETE FROM core.patients
+            WHERE id = %s
+            """,
+            (patient_id,),
+        )
+        connection.close()
 
 @pytest.fixture
 def lab_order_payload():
@@ -102,6 +201,8 @@ def lab_order_payload():
         *,
         prefix="AUTO",
         synthetic_patient_id="SYN-PAT-AUTO",
+        patient_id=None,
+        encounter_id=None,
         test_code="CBC",
         priority="ROUTINE",
         ordered_at="2026-07-15T18:00:00Z",
@@ -116,6 +217,12 @@ def lab_order_payload():
             "ordered_at": ordered_at,
         }
 
+        if patient_id is not None:
+            payload["patient_id"] = str(patient_id)
+
+        if encounter_id is not None:
+            payload["encounter_id"] = str(encounter_id)
+
         if include_test_code:
             payload["test_code"] = test_code
 
@@ -125,7 +232,6 @@ def lab_order_payload():
         return payload
 
     return build_payload
-
 
 @pytest.fixture(scope="session")
 def api_session():
