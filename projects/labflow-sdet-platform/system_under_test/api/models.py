@@ -134,6 +134,7 @@ class Encounter(Base):
         String(20),
         nullable=False,
         default="OPEN",
+        index=True,
     )
     admitted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
