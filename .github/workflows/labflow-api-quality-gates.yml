@@ -1,4 +1,4 @@
-name: LabFlow API Quality Gates
+name: LabFlow Quality Gates
 
 on:
   pull_request:
@@ -21,12 +21,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: labflow-api-${{ github.workflow }}-${{ github.ref }}
+  group: labflow-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  api-quality-gates:
-    name: Smoke then regression
+  quality-gates:
+    name: Schema, API, and database
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -36,6 +36,8 @@ jobs:
 
     env:
       LABFLOW_BASE_URL: http://localhost:8000
+      LABFLOW_TEST_DB_HOST: localhost
+      LABFLOW_TEST_DB_PORT: "5433"
 
     steps:
       - name: Check out repository
@@ -49,7 +51,10 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest==9.1.1 requests==2.34.2
+          python -m pip install \
+            pytest==9.1.1 \
+            requests==2.34.2 \
+            "psycopg[binary]==3.2.6"
 
       - name: Create CI environment file
         shell: bash
@@ -83,9 +88,16 @@ jobs:
           echo "LabFlow API did not become ready."
           exit 1
 
-      - name: Run LabFlow API quality gates
+      - name: Check Alembic schema drift
+        run: docker compose exec -T api alembic check
+
+      - name: Run API quality gates
         shell: pwsh
         run: ./scripts/run_api_quality_gates.ps1
+
+      - name: Run database contract quality gate
+        shell: pwsh
+        run: ./scripts/run_database_quality_gates.ps1
 
       - name: Capture Docker diagnostics
         if: failure()
