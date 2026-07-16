@@ -26,6 +26,9 @@ class OrderPriority(str, enum.Enum):
 
 class LabOrderStatus(str, enum.Enum):
     PLACED = "PLACED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
 
 
 class Patient(Base):
