@@ -547,3 +547,29 @@ def test_unknown_clinical_context_returns_409(
     assert response.json()["detail"] == (
         "laboratory order conflicts with existing data"
     )
+@pytest.mark.negative
+def test_encounter_belonging_to_different_patient_returns_409(
+    lab_orders_client,
+    lab_order_payload,
+    mismatched_clinical_context,
+):
+    request_body = lab_order_payload(
+        prefix="MISMATCHED-CONTEXT",
+        synthetic_patient_id=mismatched_clinical_context[
+            "synthetic_patient_id"
+        ],
+        patient_id=mismatched_clinical_context["patient_id"],
+        encounter_id=mismatched_clinical_context[
+            "encounter_id"
+        ],
+        test_code="CMP",
+        priority="ROUTINE",
+        ordered_at="2026-07-16T16:00:00Z",
+    )
+
+    response = lab_orders_client.create_order(request_body)
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == (
+        "laboratory order conflicts with existing data"
+    )

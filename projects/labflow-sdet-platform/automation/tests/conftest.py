@@ -196,6 +196,72 @@ def clinical_context(
         connection.close()
 
 @pytest.fixture
+def mismatched_clinical_context(
+    database_url: str,
+    clinical_context,
+) -> Generator[dict[str, uuid.UUID | str], None, None]:
+    second_patient_id = uuid.uuid4()
+    unique_suffix = uuid.uuid4().hex[:8]
+
+    second_synthetic_patient_id = (
+        f"SYN-MISMATCH-{unique_suffix}"
+    )
+
+    connection = psycopg.connect(
+        database_url,
+        autocommit=True,
+    )
+
+    try:
+        connection.execute(
+            """
+            INSERT INTO core.patients (
+                id,
+                synthetic_patient_id,
+                first_name,
+                last_name,
+                date_of_birth,
+                sex
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (
+                second_patient_id,
+                second_synthetic_patient_id,
+                "Riley",
+                "Cameron",
+                date(1991, 8, 22),
+                "UNKNOWN",
+            ),
+        )
+
+        yield {
+            "patient_id": second_patient_id,
+            "encounter_id": clinical_context["encounter_id"],
+            "synthetic_patient_id": (
+                second_synthetic_patient_id
+            ),
+        }
+    finally:
+        connection.execute(
+            """
+            DELETE FROM lab_orders
+            WHERE patient_id = %s
+            """,
+            (second_patient_id,),
+        )
+
+        connection.execute(
+            """
+            DELETE FROM core.patients
+            WHERE id = %s
+            """,
+            (second_patient_id,),
+        )
+
+        connection.close()
+
+@pytest.fixture
 def lab_order_payload():
     def build_payload(
         *,
