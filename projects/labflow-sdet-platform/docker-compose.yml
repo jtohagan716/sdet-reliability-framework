@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: labflow-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - labflow_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - labflow-network
+
+  api:
+    build:
+      context: .
+      dockerfile: system_under_test/Dockerfile
+    container_name: labflow-api
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live', timeout=3)"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - labflow-network
+
+volumes:
+  labflow_postgres_data:
+
+networks:
+  labflow-network:
+    driver: bridge
