@@ -23,6 +23,7 @@ strict = true
 [tool.pytest.ini_options]
 testpaths = ["automation/tests"]
 python_files = ["test_*.py"]
+pythonpath = ["."]
 addopts = [
     "--strict-markers",
     "--strict-config",
@@ -32,4 +33,5 @@ markers = [
     "smoke: critical tests that quickly verify the application is usable",
     "regression: broader tests that verify existing behavior remains correct",
     "negative: tests that verify invalid input and error handling",
+    "database: tests that validate PostgreSQL schemas, relationships, constraints, and transactions",
 ]
