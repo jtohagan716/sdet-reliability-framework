@@ -21,6 +21,7 @@ UNKNOWN_PATIENT_ID = uuid.UUID(
 
 SYNTHETIC_PATIENT_ID = "SYN-CORE-CONTRACT-001"
 
+
 pytestmark = [
     pytest.mark.database,
     pytest.mark.regression,
@@ -103,6 +104,55 @@ def _insert_encounter(
     )
 
 
+def _insert_lab_order(
+    connection: Connection,
+    *,
+    placer_order_number: str,
+    synthetic_patient_id: str,
+    patient_id: uuid.UUID | None,
+    encounter_id: uuid.UUID | None,
+    test_code: str = "CBC",
+) -> None:
+    connection.execute(
+        """
+        INSERT INTO lab_orders (
+            id,
+            placer_order_number,
+            synthetic_patient_id,
+            patient_id,
+            encounter_id,
+            test_code,
+            priority,
+            status,
+            ordered_at,
+            created_at
+        )
+        VALUES (
+            %s,
+            %s,
+            %s,
+            %s,
+            %s,
+            %s,
+            %s,
+            %s,
+            NOW(),
+            NOW()
+        )
+        """,
+        (
+            uuid.uuid4(),
+            placer_order_number,
+            synthetic_patient_id,
+            patient_id,
+            encounter_id,
+            test_code,
+            "ROUTINE",
+            "PLACED",
+        ),
+    )
+
+
 def test_patient_and_encounter_relationship_can_be_created(
     db_connection: Connection,
 ) -> None:
@@ -117,7 +167,7 @@ def test_patient_and_encounter_relationship_can_be_created(
             encounter.status
         FROM core.encounters AS encounter
         JOIN core.patients AS patient
-          ON patient.id = encounter.patient_id
+            ON patient.id = encounter.patient_id
         WHERE encounter.id = %s
         """,
         (ENCOUNTER_ID,),
@@ -221,4 +271,141 @@ def test_encounter_rejects_discharge_before_admission(
     assert (
         error.value.diag.constraint_name
         == "ck_core_encounters_discharge_after_admit"
+    )
+
+
+@pytest.mark.negative
+@pytest.mark.parametrize(
+    (
+        "include_patient_id",
+        "include_encounter_id",
+    ),
+    [
+        pytest.param(
+            True,
+            False,
+            id="patient-without-encounter",
+        ),
+        pytest.param(
+            False,
+            True,
+            id="encounter-without-patient",
+        ),
+    ],
+)
+def test_lab_order_rejects_incomplete_clinical_context(
+    db_connection: Connection,
+    include_patient_id: bool,
+    include_encounter_id: bool,
+) -> None:
+    unique_suffix = uuid.uuid4().hex[:8]
+    patient_id = uuid.uuid4()
+    encounter_id = uuid.uuid4()
+
+    _insert_patient(
+        db_connection,
+        patient_id=patient_id,
+        synthetic_patient_id=(
+            f"SYN-DB-PAIR-{unique_suffix}"
+        ),
+        sex="UNKNOWN",
+    )
+
+    _insert_encounter(
+        db_connection,
+        encounter_id=encounter_id,
+        patient_id=patient_id,
+        encounter_number=(
+            f"ENC-DB-PAIR-{unique_suffix}"
+        ),
+    )
+
+    supplied_patient_id = (
+        patient_id
+        if include_patient_id
+        else None
+    )
+    supplied_encounter_id = (
+        encounter_id
+        if include_encounter_id
+        else None
+    )
+
+    with pytest.raises(
+        psycopg.errors.CheckViolation
+    ) as error:
+        _insert_lab_order(
+            db_connection,
+            placer_order_number=(
+                f"DB-INCOMPLETE-{unique_suffix}"
+            ),
+            synthetic_patient_id=(
+                f"SYN-DB-PAIR-{unique_suffix}"
+            ),
+            patient_id=supplied_patient_id,
+            encounter_id=supplied_encounter_id,
+        )
+
+    assert (
+        error.value.diag.constraint_name
+        == "ck_lab_orders_clinical_context_pair"
+    )
+
+
+@pytest.mark.negative
+def test_lab_order_rejects_encounter_from_different_patient(
+    db_connection: Connection,
+) -> None:
+    unique_suffix = uuid.uuid4().hex[:8]
+
+    first_patient_id = uuid.uuid4()
+    second_patient_id = uuid.uuid4()
+    second_patient_encounter_id = uuid.uuid4()
+
+    _insert_patient(
+        db_connection,
+        patient_id=first_patient_id,
+        synthetic_patient_id=(
+            f"SYN-DB-FIRST-{unique_suffix}"
+        ),
+        sex="UNKNOWN",
+    )
+
+    _insert_patient(
+        db_connection,
+        patient_id=second_patient_id,
+        synthetic_patient_id=(
+            f"SYN-DB-SECOND-{unique_suffix}"
+        ),
+        sex="UNKNOWN",
+    )
+
+    _insert_encounter(
+        db_connection,
+        encounter_id=second_patient_encounter_id,
+        patient_id=second_patient_id,
+        encounter_number=(
+            f"ENC-DB-SECOND-{unique_suffix}"
+        ),
+    )
+
+    with pytest.raises(
+        psycopg.errors.ForeignKeyViolation
+    ) as error:
+        _insert_lab_order(
+            db_connection,
+            placer_order_number=(
+                f"DB-MISMATCH-{unique_suffix}"
+            ),
+            synthetic_patient_id=(
+                f"SYN-DB-FIRST-{unique_suffix}"
+            ),
+            patient_id=first_patient_id,
+            encounter_id=second_patient_encounter_id,
+            test_code="CMP",
+        )
+
+    assert (
+        error.value.diag.constraint_name
+        == "fk_lab_orders_encounter_patient"
     )

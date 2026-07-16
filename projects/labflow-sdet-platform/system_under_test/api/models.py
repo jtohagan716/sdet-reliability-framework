@@ -8,7 +8,9 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    ForeignKeyConstraint,
     String,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -98,6 +100,11 @@ class Encounter(Base):
             ),
             name="ck_core_encounters_discharge_after_admit",
         ),
+        UniqueConstraint(
+            "id",
+            "patient_id",
+            name="uq_core_encounters_id_patient_id",
+        ),
         {
             "schema": "core",
         },
@@ -159,6 +166,26 @@ class Encounter(Base):
 
 class LabOrder(Base):
     __tablename__ = "lab_orders"
+    __table_args__ = (
+        CheckConstraint(
+            (
+                "(patient_id IS NULL AND encounter_id IS NULL) "
+                "OR "
+                "(patient_id IS NOT NULL "
+                "AND encounter_id IS NOT NULL)"
+            ),
+            name="ck_lab_orders_clinical_context_pair",
+        ),
+        ForeignKeyConstraint(
+            ["encounter_id", "patient_id"],
+            [
+                "core.encounters.id",
+                "core.encounters.patient_id",
+            ],
+            name="fk_lab_orders_encounter_patient",
+            ondelete="RESTRICT",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -173,6 +200,16 @@ class LabOrder(Base):
     synthetic_patient_id: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
+        index=True,
+    )
+    patient_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=True,
+        index=True,
+    )
+    encounter_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=True,
         index=True,
     )
     test_code: Mapped[str] = mapped_column(

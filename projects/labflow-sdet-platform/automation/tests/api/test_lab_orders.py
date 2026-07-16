@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 import pytest
 
@@ -111,7 +112,9 @@ def test_duplicate_placer_order_number_returns_409(
 
     assert original_response.status_code == 201
 
-    duplicate_response = lab_orders_client.create_order(duplicate_request)
+    duplicate_response = lab_orders_client.create_order(
+        duplicate_request
+    )
 
     assert duplicate_response.status_code == 409
     assert duplicate_response.json()["detail"] == (
@@ -119,7 +122,9 @@ def test_duplicate_placer_order_number_returns_409(
     )
 
     original_order = original_response.json()
-    retrieve_response = lab_orders_client.get_order(original_order["id"])
+    retrieve_response = lab_orders_client.get_order(
+        original_order["id"]
+    )
 
     assert retrieve_response.status_code == 200
 
@@ -422,3 +427,149 @@ def test_malformed_ordered_at_returns_422(
     assert error["loc"] == ["body", "ordered_at"]
     assert error["type"] == "datetime_from_date_parsing"
     assert error["input"] == request_body["ordered_at"]
+
+
+@pytest.mark.smoke
+def test_create_lab_order_with_valid_clinical_context_returns_201(
+    lab_orders_client,
+    lab_order_payload,
+    clinical_context,
+):
+    request_body = lab_order_payload(
+        prefix="CLINICAL-CONTEXT",
+        synthetic_patient_id=clinical_context[
+            "synthetic_patient_id"
+        ],
+        patient_id=clinical_context["patient_id"],
+        encounter_id=clinical_context["encounter_id"],
+        test_code="CBC",
+        priority="ROUTINE",
+        ordered_at="2026-07-16T15:00:00Z",
+    )
+
+    response = lab_orders_client.create_order(request_body)
+
+    assert response.status_code == 201
+
+    response_body = response.json()
+
+    assert (
+        response_body["patient_id"]
+        == str(clinical_context["patient_id"])
+    )
+    assert (
+        response_body["encounter_id"]
+        == str(clinical_context["encounter_id"])
+    )
+    assert (
+        response_body["synthetic_patient_id"]
+        == clinical_context["synthetic_patient_id"]
+    )
+
+
+@pytest.mark.negative
+def test_patient_id_without_encounter_id_returns_422(
+    lab_orders_client,
+    lab_order_payload,
+):
+    request_body = lab_order_payload(
+        prefix="PATIENT-ONLY",
+        patient_id=uuid.uuid4(),
+        test_code="CBC",
+        priority="ROUTINE",
+        ordered_at="2026-07-16T15:15:00Z",
+    )
+
+    assert "patient_id" in request_body
+    assert "encounter_id" not in request_body
+
+    response = lab_orders_client.create_order(request_body)
+
+    assert response.status_code == 422
+
+    error = response.json()["detail"][0]
+
+    assert error["loc"] == ["body"]
+    assert error["type"] == "value_error"
+    assert (
+        "patient_id and encounter_id must be provided together"
+        in error["msg"]
+    )
+
+
+@pytest.mark.negative
+def test_encounter_id_without_patient_id_returns_422(
+    lab_orders_client,
+    lab_order_payload,
+):
+    request_body = lab_order_payload(
+        prefix="ENCOUNTER-ONLY",
+        encounter_id=uuid.uuid4(),
+        test_code="CBC",
+        priority="ROUTINE",
+        ordered_at="2026-07-16T15:30:00Z",
+    )
+
+    assert "patient_id" not in request_body
+    assert "encounter_id" in request_body
+
+    response = lab_orders_client.create_order(request_body)
+
+    assert response.status_code == 422
+
+    error = response.json()["detail"][0]
+
+    assert error["loc"] == ["body"]
+    assert error["type"] == "value_error"
+    assert (
+        "patient_id and encounter_id must be provided together"
+        in error["msg"]
+    )
+
+
+@pytest.mark.negative
+def test_unknown_clinical_context_returns_409(
+    lab_orders_client,
+    lab_order_payload,
+):
+    request_body = lab_order_payload(
+        prefix="UNKNOWN-CONTEXT",
+        patient_id=uuid.uuid4(),
+        encounter_id=uuid.uuid4(),
+        test_code="CBC",
+        priority="ROUTINE",
+        ordered_at="2026-07-16T15:45:00Z",
+    )
+
+    response = lab_orders_client.create_order(request_body)
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == (
+        "laboratory order conflicts with existing data"
+    )
+@pytest.mark.negative
+def test_encounter_belonging_to_different_patient_returns_409(
+    lab_orders_client,
+    lab_order_payload,
+    mismatched_clinical_context,
+):
+    request_body = lab_order_payload(
+        prefix="MISMATCHED-CONTEXT",
+        synthetic_patient_id=mismatched_clinical_context[
+            "synthetic_patient_id"
+        ],
+        patient_id=mismatched_clinical_context["patient_id"],
+        encounter_id=mismatched_clinical_context[
+            "encounter_id"
+        ],
+        test_code="CMP",
+        priority="ROUTINE",
+        ordered_at="2026-07-16T16:00:00Z",
+    )
+
+    response = lab_orders_client.create_order(request_body)
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == (
+        "laboratory order conflicts with existing data"
+    )
