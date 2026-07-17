@@ -405,3 +405,122 @@ def test_unchanged_status_assignment_creates_no_audit_record(
     )
 
     assert audit_rows == []
+
+
+
+def test_status_and_audit_record_roll_back_together(
+    db_connection: Connection,
+) -> None:
+    clinical_context = _insert_clinical_context(
+        db_connection
+    )
+    lab_order_id = _insert_lab_order(
+        db_connection,
+        clinical_context,
+    )
+
+    db_connection.execute(
+        "SAVEPOINT status_audit_atomicity"
+    )
+
+    returned_status = _transition_lab_order_status(
+        db_connection,
+        lab_order_id,
+        "IN_PROGRESS",
+    )
+
+    assert returned_status == "IN_PROGRESS"
+    assert (
+        _read_lab_order_status(
+            db_connection,
+            lab_order_id,
+        )
+        == "IN_PROGRESS"
+    )
+    assert len(
+        _read_status_audit_rows(
+            db_connection,
+            lab_order_id,
+        )
+    ) == 1
+
+    db_connection.execute(
+        "ROLLBACK TO SAVEPOINT status_audit_atomicity"
+    )
+    db_connection.execute(
+        "RELEASE SAVEPOINT status_audit_atomicity"
+    )
+
+    assert (
+        _read_lab_order_status(
+            db_connection,
+            lab_order_id,
+        )
+        == "PLACED"
+    )
+    assert (
+        _read_status_audit_rows(
+            db_connection,
+            lab_order_id,
+        )
+        == []
+    )
+
+
+def test_complete_lifecycle_creates_ordered_audit_history(
+    db_connection: Connection,
+) -> None:
+    clinical_context = _insert_clinical_context(
+        db_connection
+    )
+    lab_order_id = _insert_lab_order(
+        db_connection,
+        clinical_context,
+    )
+
+    first_result = _transition_lab_order_status(
+        db_connection,
+        lab_order_id,
+        "IN_PROGRESS",
+    )
+    second_result = _transition_lab_order_status(
+        db_connection,
+        lab_order_id,
+        "COMPLETED",
+    )
+
+    assert first_result == "IN_PROGRESS"
+    assert second_result == "COMPLETED"
+
+    stored_status = _read_lab_order_status(
+        db_connection,
+        lab_order_id,
+    )
+    audit_rows = _read_status_audit_rows(
+        db_connection,
+        lab_order_id,
+    )
+
+    assert stored_status == "COMPLETED"
+    assert len(audit_rows) == 2
+
+    status_history = [
+        (
+            row[0],
+            row[1],
+        )
+        for row in audit_rows
+    ]
+
+    assert status_history == [
+        (
+            "PLACED",
+            "IN_PROGRESS",
+        ),
+        (
+            "IN_PROGRESS",
+            "COMPLETED",
+        ),
+    ]
+
+    assert audit_rows[0][4] <= audit_rows[1][4]
