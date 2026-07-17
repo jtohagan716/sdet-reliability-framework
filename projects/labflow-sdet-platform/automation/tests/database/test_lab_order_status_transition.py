@@ -264,3 +264,144 @@ def test_transition_rejects_unknown_lab_order(
     db_connection.execute(
         "RELEASE SAVEPOINT missing_lab_order"
     )
+
+
+
+def _read_status_audit_rows(
+    connection: Connection,
+    lab_order_id: uuid.UUID,
+):
+    return connection.execute(
+        """
+        SELECT
+            previous_status,
+            new_status,
+            changed_by,
+            application_name,
+            changed_at
+        FROM public.lab_order_status_audit
+        WHERE lab_order_id = %s
+        ORDER BY id
+        """,
+        (lab_order_id,),
+    ).fetchall()
+
+
+def test_valid_transition_creates_status_audit_record(
+    db_connection: Connection,
+) -> None:
+    clinical_context = _insert_clinical_context(
+        db_connection
+    )
+    lab_order_id = _insert_lab_order(
+        db_connection,
+        clinical_context,
+    )
+
+    expected_database_user = db_connection.execute(
+        "SELECT current_user"
+    ).fetchone()[0]
+
+    expected_application_name = db_connection.execute(
+        """
+        SELECT current_setting(
+            'application_name'
+        )
+        """
+    ).fetchone()[0]
+
+    _transition_lab_order_status(
+        db_connection,
+        lab_order_id,
+        "IN_PROGRESS",
+    )
+
+    audit_rows = _read_status_audit_rows(
+        db_connection,
+        lab_order_id,
+    )
+
+    assert len(audit_rows) == 1
+
+    (
+        previous_status,
+        new_status,
+        changed_by,
+        application_name,
+        changed_at,
+    ) = audit_rows[0]
+
+    assert previous_status == "PLACED"
+    assert new_status == "IN_PROGRESS"
+    assert changed_by == expected_database_user
+    assert application_name == expected_application_name
+    assert changed_at is not None
+
+
+@pytest.mark.negative
+def test_rejected_transition_creates_no_status_audit_record(
+    db_connection: Connection,
+) -> None:
+    clinical_context = _insert_clinical_context(
+        db_connection
+    )
+    lab_order_id = _insert_lab_order(
+        db_connection,
+        clinical_context,
+    )
+
+    db_connection.execute(
+        "SAVEPOINT rejected_audit_transition"
+    )
+
+    with pytest.raises(
+        psycopg.errors.CheckViolation,
+        match="Invalid lab order status transition",
+    ):
+        _transition_lab_order_status(
+            db_connection,
+            lab_order_id,
+            "COMPLETED",
+        )
+
+    db_connection.execute(
+        "ROLLBACK TO SAVEPOINT rejected_audit_transition"
+    )
+    db_connection.execute(
+        "RELEASE SAVEPOINT rejected_audit_transition"
+    )
+
+    audit_rows = _read_status_audit_rows(
+        db_connection,
+        lab_order_id,
+    )
+
+    assert audit_rows == []
+
+
+def test_unchanged_status_assignment_creates_no_audit_record(
+    db_connection: Connection,
+) -> None:
+    clinical_context = _insert_clinical_context(
+        db_connection
+    )
+    lab_order_id = _insert_lab_order(
+        db_connection,
+        clinical_context,
+    )
+
+    db_connection.execute(
+        """
+        UPDATE public.lab_orders
+        SET status = status
+        WHERE id = %s
+        """,
+        (lab_order_id,),
+    )
+
+    audit_rows = _read_status_audit_rows(
+        db_connection,
+        lab_order_id,
+    )
+
+    assert audit_rows == []
