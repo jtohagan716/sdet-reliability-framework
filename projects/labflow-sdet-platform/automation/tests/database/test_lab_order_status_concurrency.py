@@ -183,9 +183,7 @@ def _wait_until_blocked_by(
         f"Waiting PID: {waiting_backend_pid}; "
         f"expected blocker PID: {expected_blocker_backend_pid}; "
         f"latest observation: {latest_observation}"
-    )  
-
-
+    )
 def _read_final_status(
     connection: psycopg.Connection,
     lab_order_id: uuid.UUID,
@@ -226,8 +224,7 @@ def _read_status_history(
             str(new_status),
         )
         for previous_status, new_status in rows
-    ]  
-
+    ]
 def test_competing_status_transitions_are_serialized(
     database_url: str,
     clinical_context: dict[str, object],
@@ -330,6 +327,121 @@ def test_competing_status_transitions_are_serialized(
         assert status_history == [
             ("PLACED", "IN_PROGRESS"),
             ("IN_PROGRESS", "COMPLETED"),
+        ]
+
+    finally:
+        transaction_a_connection.rollback()
+        transaction_a_connection.close()
+        observer_connection.close()
+
+        executor.shutdown(
+            wait=True,
+            cancel_futures=True,
+        )
+def test_waiting_transition_is_revalidated_after_blocker_commits(
+    database_url: str,
+    clinical_context: dict[str, object],
+) -> None:
+    lab_order_id = _insert_committed_lab_order(
+        database_url,
+        clinical_context,
+    )
+
+    transaction_a_connection_info = _connection_info(
+        database_url,
+        "labflow-concurrency-invalidating-transaction-a",
+    )
+    observer_connection_info = _connection_info(
+        database_url,
+        "labflow-concurrency-invalidating-observer",
+    )
+
+    transaction_b_pid_queue: queue.Queue[int] = queue.Queue(
+        maxsize=1
+    )
+
+    transaction_a_connection = psycopg.connect(
+        transaction_a_connection_info
+    )
+    observer_connection = psycopg.connect(
+        observer_connection_info,
+        autocommit=True,
+    )
+    executor = ThreadPoolExecutor(max_workers=1)
+
+    try:
+        transaction_a_connection.execute(
+            "SET LOCAL lock_timeout = '5s'"
+        )
+        transaction_a_connection.execute(
+            "SET LOCAL statement_timeout = '10s'"
+        )
+
+        transaction_a_backend_pid = (
+            transaction_a_connection.info.backend_pid
+        )
+
+        transaction_a_status = _transition_lab_order_status(
+            transaction_a_connection,
+            lab_order_id,
+            "CANCELLED",
+        )
+
+        assert transaction_a_status == "CANCELLED"
+
+        transaction_b_future = executor.submit(
+            _transition_and_commit,
+            database_url,
+            lab_order_id,
+            "IN_PROGRESS",
+            transaction_b_pid_queue,
+        )
+
+        try:
+            transaction_b_backend_pid = (
+                transaction_b_pid_queue.get(
+                    timeout=LOCK_WAIT_TIMEOUT_SECONDS
+                )
+            )
+        except queue.Empty:
+            pytest.fail(
+                "Transaction B did not report its PostgreSQL "
+                "backend PID."
+            )
+
+        _wait_until_blocked_by(
+            observer_connection,
+            waiting_backend_pid=transaction_b_backend_pid,
+            expected_blocker_backend_pid=(
+                transaction_a_backend_pid
+            ),
+        )
+
+        assert not transaction_b_future.done()
+
+        transaction_a_connection.commit()
+
+        with pytest.raises(
+            psycopg.errors.CheckViolation
+        ) as error_info:
+            transaction_b_future.result(
+                timeout=LOCK_WAIT_TIMEOUT_SECONDS
+            )
+
+        assert error_info.value.sqlstate == "23514"
+
+        final_status = _read_final_status(
+            observer_connection,
+            lab_order_id,
+        )
+        status_history = _read_status_history(
+            observer_connection,
+            lab_order_id,
+        )
+
+        assert final_status == "CANCELLED"
+        assert status_history == [
+            ("PLACED", "CANCELLED"),
         ]
 
     finally:
