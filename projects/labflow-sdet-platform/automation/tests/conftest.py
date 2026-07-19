@@ -1,0 +1,332 @@
+import os
+import uuid
+from collections.abc import Generator
+from datetime import date, datetime, timezone
+from pathlib import Path
+
+import psycopg
+import pytest
+import requests
+from psycopg import Connection
+from psycopg.conninfo import make_conninfo
+
+from automation.clients.health_client import HealthClient
+from automation.clients.lab_orders_client import LabOrdersClient
+
+
+def _read_environment_file(path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+
+        key, value = line.split("=", maxsplit=1)
+        values[key.strip()] = value.strip().strip('"').strip("'")
+
+    return values
+
+
+@pytest.fixture(scope="session")
+def base_url() -> str:
+    configured_url = os.getenv(
+        "LABFLOW_BASE_URL",
+        "http://localhost:8000",
+    )
+    return configured_url.rstrip("/")
+
+
+@pytest.fixture(scope="session")
+def database_url() -> str:
+    configured_url = os.getenv("LABFLOW_TEST_DATABASE_URL")
+
+    if configured_url:
+        return configured_url
+
+    project_root = Path(__file__).resolve().parents[2]
+    environment_file = project_root / ".env"
+
+    if not environment_file.exists():
+        pytest.fail(
+            "Database tests require LABFLOW_TEST_DATABASE_URL "
+            "or a LabFlow .env file."
+        )
+
+    environment = _read_environment_file(environment_file)
+
+    required_keys = (
+        "POSTGRES_DB",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+    )
+    missing_keys = [
+        key
+        for key in required_keys
+        if not environment.get(key)
+    ]
+
+    if missing_keys:
+        pytest.fail(
+            "Missing required database settings: "
+            + ", ".join(missing_keys)
+        )
+
+    return make_conninfo(
+        host=os.getenv("LABFLOW_TEST_DB_HOST", "localhost"),
+        port=os.getenv("LABFLOW_TEST_DB_PORT", "5433"),
+        dbname=environment["POSTGRES_DB"],
+        user=environment["POSTGRES_USER"],
+        password=environment["POSTGRES_PASSWORD"],
+        application_name="labflow-pytest",
+        connect_timeout=5,
+    )
+
+
+@pytest.fixture
+def db_connection(
+    database_url: str,
+) -> Generator[Connection, None, None]:
+    connection = psycopg.connect(database_url)
+
+    try:
+        yield connection
+    finally:
+        connection.rollback()
+        connection.close()
+@pytest.fixture
+def clinical_context(
+    database_url: str,
+) -> Generator[dict[str, uuid.UUID | str], None, None]:
+    patient_id = uuid.uuid4()
+    encounter_id = uuid.uuid4()
+    unique_suffix = uuid.uuid4().hex[:8]
+
+    synthetic_patient_id = f"SYN-CLINICAL-{unique_suffix}"
+    encounter_number = f"ENC-CLINICAL-{unique_suffix}"
+
+    connection = psycopg.connect(
+        database_url,
+        autocommit=True,
+    )
+
+    try:
+        connection.execute(
+            """
+            INSERT INTO core.patients (
+                id,
+                synthetic_patient_id,
+                first_name,
+                last_name,
+                date_of_birth,
+                sex
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (
+                patient_id,
+                synthetic_patient_id,
+                "Jordan",
+                "Taylor",
+                date(1988, 6, 15),
+                "UNKNOWN",
+            ),
+        )
+
+        connection.execute(
+            """
+            INSERT INTO core.encounters (
+                id,
+                encounter_number,
+                patient_id,
+                encounter_type,
+                facility_code,
+                status,
+                admitted_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                encounter_id,
+                encounter_number,
+                patient_id,
+                "OUTPATIENT",
+                "FAC-AUTO-001",
+                "OPEN",
+                datetime(
+                    2026,
+                    7,
+                    16,
+                    14,
+                    0,
+                    tzinfo=timezone.utc,
+                ),
+            ),
+        )
+
+        yield {
+            "patient_id": patient_id,
+            "encounter_id": encounter_id,
+            "synthetic_patient_id": synthetic_patient_id,
+            "encounter_number": encounter_number,
+        }
+    finally:
+        connection.execute(
+            """
+            DELETE FROM lab_orders
+            WHERE encounter_id = %s
+            """,
+            (encounter_id,),
+        )
+        connection.execute(
+            """
+            DELETE FROM core.encounters
+            WHERE id = %s
+            """,
+            (encounter_id,),
+        )
+        connection.execute(
+            """
+            DELETE FROM core.patients
+            WHERE id = %s
+            """,
+            (patient_id,),
+        )
+        connection.close()
+
+@pytest.fixture
+def mismatched_clinical_context(
+    database_url: str,
+    clinical_context,
+) -> Generator[dict[str, uuid.UUID | str], None, None]:
+    second_patient_id = uuid.uuid4()
+    unique_suffix = uuid.uuid4().hex[:8]
+
+    second_synthetic_patient_id = (
+        f"SYN-MISMATCH-{unique_suffix}"
+    )
+
+    connection = psycopg.connect(
+        database_url,
+        autocommit=True,
+    )
+
+    try:
+        connection.execute(
+            """
+            INSERT INTO core.patients (
+                id,
+                synthetic_patient_id,
+                first_name,
+                last_name,
+                date_of_birth,
+                sex
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (
+                second_patient_id,
+                second_synthetic_patient_id,
+                "Riley",
+                "Cameron",
+                date(1991, 8, 22),
+                "UNKNOWN",
+            ),
+        )
+
+        yield {
+            "patient_id": second_patient_id,
+            "encounter_id": clinical_context["encounter_id"],
+            "synthetic_patient_id": (
+                second_synthetic_patient_id
+            ),
+        }
+    finally:
+        connection.execute(
+            """
+            DELETE FROM lab_orders
+            WHERE patient_id = %s
+            """,
+            (second_patient_id,),
+        )
+
+        connection.execute(
+            """
+            DELETE FROM core.patients
+            WHERE id = %s
+            """,
+            (second_patient_id,),
+        )
+
+        connection.close()
+
+@pytest.fixture
+def lab_order_payload():
+    def build_payload(
+        *,
+        prefix="AUTO",
+        synthetic_patient_id="SYN-PAT-AUTO",
+        patient_id=None,
+        encounter_id=None,
+        test_code="CBC",
+        priority="ROUTINE",
+        ordered_at="2026-07-15T18:00:00Z",
+        include_priority=True,
+        include_test_code=True,
+    ):
+        unique_suffix = uuid.uuid4().hex[:8]
+
+        payload = {
+            "placer_order_number": f"{prefix}-{unique_suffix}",
+            "synthetic_patient_id": synthetic_patient_id,
+            "ordered_at": ordered_at,
+        }
+
+        if patient_id is not None:
+            payload["patient_id"] = str(patient_id)
+
+        if encounter_id is not None:
+            payload["encounter_id"] = str(encounter_id)
+
+        if include_test_code:
+            payload["test_code"] = test_code
+
+        if include_priority:
+            payload["priority"] = priority
+
+        return payload
+
+    return build_payload
+
+@pytest.fixture(scope="session")
+def api_session():
+    with requests.Session() as session:
+        session.headers.update(
+            {
+                "Accept": "application/json",
+            }
+        )
+        yield session
+
+
+@pytest.fixture(scope="session")
+def health_client(
+    api_session,
+    base_url,
+):
+    return HealthClient(
+        session=api_session,
+        base_url=base_url,
+    )
+
+
+@pytest.fixture(scope="session")
+def lab_orders_client(
+    api_session,
+    base_url,
+):
+    return LabOrdersClient(
+        session=api_session,
+        base_url=base_url,
+    )

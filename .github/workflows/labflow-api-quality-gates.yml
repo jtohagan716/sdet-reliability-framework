@@ -1,0 +1,110 @@
+name: LabFlow Quality Gates
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "projects/labflow-sdet-platform/**"
+      - ".github/workflows/labflow-api-quality-gates.yml"
+
+  push:
+    branches:
+      - main
+    paths:
+      - "projects/labflow-sdet-platform/**"
+      - ".github/workflows/labflow-api-quality-gates.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: labflow-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gates:
+    name: Schema, API, and database
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: projects/labflow-sdet-platform
+
+    env:
+      LABFLOW_BASE_URL: http://localhost:8000
+      LABFLOW_TEST_DB_HOST: localhost
+      LABFLOW_TEST_DB_PORT: "5433"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            pytest==9.1.1 \
+            requests==2.34.2 \
+            "psycopg[binary]==3.2.6"
+
+      - name: Create CI environment file
+        shell: bash
+        run: cp .env.example .env
+
+      - name: Validate Docker Compose configuration
+        run: docker compose config --quiet
+
+      - name: Build and start LabFlow
+        run: docker compose up -d --build
+
+      - name: Wait for API readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for attempt in {1..30}; do
+            if curl \
+              --fail \
+              --silent \
+              --show-error \
+              http://localhost:8000/health/ready > /dev/null; then
+              echo "LabFlow API is ready."
+              exit 0
+            fi
+
+            echo "Readiness attempt ${attempt}/30 failed."
+            sleep 2
+          done
+
+          echo "LabFlow API did not become ready."
+          exit 1
+
+      - name: Check Alembic schema drift
+        run: docker compose exec -T api alembic check
+
+      - name: Run API quality gates
+        shell: pwsh
+        run: ./scripts/run_api_quality_gates.ps1
+
+      - name: Run database contract quality gate
+        shell: pwsh
+        run: ./scripts/run_database_quality_gates.ps1
+
+      - name: Capture Docker diagnostics
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs --no-color
+
+      - name: Stop LabFlow
+        if: always()
+        run: docker compose down -v --remove-orphans
