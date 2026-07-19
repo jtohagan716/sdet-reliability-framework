@@ -10,24 +10,25 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.execute(
-        """
-        ALTER TYPE public.lab_order_status
-        ADD VALUE IF NOT EXISTS 'IN_PROGRESS' AFTER 'PLACED'
-        """
-    )
-    op.execute(
-        """
-        ALTER TYPE public.lab_order_status
-        ADD VALUE IF NOT EXISTS 'COMPLETED' AFTER 'IN_PROGRESS'
-        """
-    )
-    op.execute(
-        """
-        ALTER TYPE public.lab_order_status
-        ADD VALUE IF NOT EXISTS 'CANCELLED' AFTER 'COMPLETED'
-        """
-    )
+    with op.get_context().autocommit_block():
+        op.execute(
+            """
+            ALTER TYPE public.lab_order_status
+            ADD VALUE IF NOT EXISTS 'IN_PROGRESS' AFTER 'PLACED'
+            """
+        )
+        op.execute(
+            """
+            ALTER TYPE public.lab_order_status
+            ADD VALUE IF NOT EXISTS 'COMPLETED' AFTER 'IN_PROGRESS'
+            """
+        )
+        op.execute(
+            """
+            ALTER TYPE public.lab_order_status
+            ADD VALUE IF NOT EXISTS 'CANCELLED' AFTER 'COMPLETED'
+            """
+        )
 
 
 def downgrade() -> None:
