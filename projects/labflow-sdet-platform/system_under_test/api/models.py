@@ -3,15 +3,20 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
+    BigInteger,
     CheckConstraint,
     Date,
     DateTime,
     Enum,
     ForeignKey,
     ForeignKeyConstraint,
+    Identity,
+    Index,
     String,
+    Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -26,7 +31,16 @@ class OrderPriority(str, enum.Enum):
 
 class LabOrderStatus(str, enum.Enum):
     PLACED = "PLACED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
 
+
+LAB_ORDER_STATUS_ENUM = Enum(
+    LabOrderStatus,
+    name="lab_order_status",
+    metadata=Base.metadata,
+)
 
 class Patient(Base):
     __tablename__ = "patients"
@@ -223,7 +237,7 @@ class LabOrder(Base):
         default=OrderPriority.ROUTINE,
     )
     status: Mapped[LabOrderStatus] = mapped_column(
-        Enum(LabOrderStatus, name="lab_order_status"),
+        LAB_ORDER_STATUS_ENUM,
         nullable=False,
         default=LabOrderStatus.PLACED,
     )
@@ -235,4 +249,53 @@ class LabOrder(Base):
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
+    )
+class LabOrderStatusAudit(Base):
+    __tablename__ = "lab_order_status_audit"
+    __table_args__ = (
+        CheckConstraint(
+            "previous_status IS DISTINCT FROM new_status",
+            name="ck_lab_order_status_audit_changed",
+        ),
+        Index(
+            "ix_lab_order_status_audit_order_id",
+            "lab_order_id",
+            "id",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(
+        BigInteger(),
+        Identity(always=True),
+        primary_key=True,
+    )
+    lab_order_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "lab_orders.id",
+            name="fk_lab_order_status_audit_lab_order",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+    previous_status: Mapped[LabOrderStatus] = mapped_column(
+        LAB_ORDER_STATUS_ENUM,
+        nullable=False,
+    )
+    new_status: Mapped[LabOrderStatus] = mapped_column(
+        LAB_ORDER_STATUS_ENUM,
+        nullable=False,
+    )
+    changed_by: Mapped[str] = mapped_column(
+        Text(),
+        nullable=False,
+    )
+    application_name: Mapped[str] = mapped_column(
+        Text(),
+        nullable=False,
+    )
+    changed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("clock_timestamp()"),
     )
