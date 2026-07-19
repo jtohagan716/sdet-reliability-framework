@@ -5,6 +5,7 @@ import time
 import uuid
 import hashlib
 import json
+from contextlib import asynccontextmanager
 from datetime import datetime, UTC
 from fastapi.responses import HTMLResponse
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
@@ -13,13 +14,19 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from framework.security.jwt_decoder import decode_jwt
 from framework.security.jwt_inspector import inspect_jwt
-from api_service.database import get_connection
+from api_service.database import (
+    close_database_resources,
+    get_connection,
+    get_database_resource_status,
+    initialize_database_resources,
+)
 from api_service.repositories.patients import get_patient_summary_from_postgres
 from api_service.repositories.data_quality_reviews import (
     VALID_REVIEW_STATUSES,
     get_review_item_detail,
     list_review_items,
 )
+from api_service.database_timings import DatabasePhaseTimings
 
 
 TRUSTED_ISSUER = "https://company-login.com"
@@ -47,9 +54,20 @@ PATIENT_LOOKUP_TOTAL = Counter(
 )
 
 
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    initialize_database_resources()
+
+    try:
+        yield
+    finally:
+        close_database_resources()
+
+
 app = FastAPI(
     title="Synthetic Echo Service",
     description="Controlled test service for reliability and latency simulation.",
+    lifespan=lifespan,
 )
 
 if os.getenv("OTEL_ENABLED", "false").lower() == "true":
@@ -558,6 +576,40 @@ async def validate_idempotency_behavior(
                 "replayed": False,
                 "replayed_count": replayed_count,
             }
+@app.get("/qa/database-connection-timing")
+def database_connection_timing(
+    patient_id: int = 1001,
+):
+    if os.getenv("ENABLE_QA_ENDPOINTS", "false").lower() != "true":
+        raise HTTPException(
+            status_code=404,
+            detail="QA endpoints are disabled",
+        )
+
+    timings = DatabasePhaseTimings()
+
+    patient = get_patient_summary_from_postgres(
+        patient_id,
+        defect_mode=PATIENT_LOOKUP_DEFECT_MODE,
+        timings=timings,
+    )
+
+    if patient is None:
+        raise HTTPException(
+            status_code=404,
+            detail="PATIENT_NOT_FOUND",
+        )
+
+    resource_status = get_database_resource_status()
+
+    return {
+        "patient_id": patient_id,
+        "connection_strategy": resource_status[
+            "connection_strategy"
+        ],
+        "database_phases": timings.as_dict(),
+        "database_resources": resource_status,
+    }
 
 @app.get(
     "/patients/{patient_id}",

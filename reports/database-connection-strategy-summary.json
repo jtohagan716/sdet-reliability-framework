@@ -1,0 +1,290 @@
+{
+  "study_valid": true,
+  "repetitions_per_configuration": 3,
+  "request_count_per_run": 200,
+  "concurrency": 20,
+  "runs": [
+    {
+      "run_id": "database-connection-direct-warm-20260713T040803565352Z",
+      "configuration": "direct",
+      "strategy": "connection_per_operation",
+      "throughput_rps": 80.048,
+      "client_mean_ms": 238.38,
+      "client_p95_ms": 564.959,
+      "acquire_mean_ms": 163.925,
+      "acquire_p95_ms": 533.383,
+      "database_total_mean_ms": 180.314,
+      "database_total_p95_ms": 538.764,
+      "peak_waiters": null
+    },
+    {
+      "run_id": "database-connection-direct-warm-20260713T040820256959Z",
+      "configuration": "direct",
+      "strategy": "connection_per_operation",
+      "throughput_rps": 106.044,
+      "client_mean_ms": 177.73,
+      "client_p95_ms": 324.409,
+      "acquire_mean_ms": 59.137,
+      "acquire_p95_ms": 151.514,
+      "database_total_mean_ms": 89.581,
+      "database_total_p95_ms": 205.099,
+      "peak_waiters": null
+    },
+    {
+      "run_id": "database-connection-direct-warm-20260713T040914257042Z",
+      "configuration": "direct",
+      "strategy": "connection_per_operation",
+      "throughput_rps": 94.99,
+      "client_mean_ms": 201.991,
+      "client_p95_ms": 298.891,
+      "acquire_mean_ms": 57.383,
+      "acquire_p95_ms": 88.425,
+      "database_total_mean_ms": 89.196,
+      "database_total_p95_ms": 132.681,
+      "peak_waiters": null
+    },
+    {
+      "run_id": "database-connection-dynamic-4-8-warm-20260713T034133134290Z",
+      "configuration": "dynamic-4-8",
+      "strategy": "bounded_pool",
+      "throughput_rps": 154.947,
+      "client_mean_ms": 122.776,
+      "client_p95_ms": 190.561,
+      "acquire_mean_ms": 2.947,
+      "acquire_p95_ms": 20.338,
+      "database_total_mean_ms": 23.351,
+      "database_total_p95_ms": 47.63,
+      "peak_waiters": 4
+    },
+    {
+      "run_id": "database-connection-dynamic-4-8-warm-20260713T034758812402Z",
+      "configuration": "dynamic-4-8",
+      "strategy": "bounded_pool",
+      "throughput_rps": 192.182,
+      "client_mean_ms": 99.994,
+      "client_p95_ms": 197.766,
+      "acquire_mean_ms": 1.677,
+      "acquire_p95_ms": 12.031,
+      "database_total_mean_ms": 17.78,
+      "database_total_p95_ms": 36.988,
+      "peak_waiters": 4
+    },
+    {
+      "run_id": "database-connection-dynamic-4-8-warm-20260713T035004463609Z",
+      "configuration": "dynamic-4-8",
+      "strategy": "bounded_pool",
+      "throughput_rps": 167.791,
+      "client_mean_ms": 112.023,
+      "client_p95_ms": 171.988,
+      "acquire_mean_ms": 2.637,
+      "acquire_p95_ms": 19.97,
+      "database_total_mean_ms": 23.606,
+      "database_total_p95_ms": 63.986,
+      "peak_waiters": 7
+    },
+    {
+      "run_id": "database-connection-fixed-8-warm-20260713T034327375212Z",
+      "configuration": "fixed-8",
+      "strategy": "bounded_pool",
+      "throughput_rps": 166.965,
+      "client_mean_ms": 115.502,
+      "client_p95_ms": 200.408,
+      "acquire_mean_ms": 7.016,
+      "acquire_p95_ms": 41.354,
+      "database_total_mean_ms": 36.913,
+      "database_total_p95_ms": 84.155,
+      "peak_waiters": 8
+    },
+    {
+      "run_id": "database-connection-fixed-8-warm-20260713T034512016994Z",
+      "configuration": "fixed-8",
+      "strategy": "bounded_pool",
+      "throughput_rps": 180.398,
+      "client_mean_ms": 104.892,
+      "client_p95_ms": 154.947,
+      "acquire_mean_ms": 1.112,
+      "acquire_p95_ms": 8.103,
+      "database_total_mean_ms": 22.556,
+      "database_total_p95_ms": 42.777,
+      "peak_waiters": 4
+    },
+    {
+      "run_id": "database-connection-fixed-8-warm-20260713T035143063941Z",
+      "configuration": "fixed-8",
+      "strategy": "bounded_pool",
+      "throughput_rps": 191.306,
+      "client_mean_ms": 98.329,
+      "client_p95_ms": 159.142,
+      "acquire_mean_ms": 2.796,
+      "acquire_p95_ms": 15.828,
+      "database_total_mean_ms": 24.178,
+      "database_total_p95_ms": 55.86,
+      "peak_waiters": 8
+    }
+  ],
+  "aggregates": {
+    "direct": {
+      "configuration": "direct",
+      "run_count": 3,
+      "run_ids": [
+        "database-connection-direct-warm-20260713T040803565352Z",
+        "database-connection-direct-warm-20260713T040820256959Z",
+        "database-connection-direct-warm-20260713T040914257042Z"
+      ],
+      "throughput_rps": {
+        "median": 94.99,
+        "minimum": 80.048,
+        "maximum": 106.044
+      },
+      "client_mean_ms": {
+        "median": 201.991,
+        "minimum": 177.73,
+        "maximum": 238.38
+      },
+      "client_p95_ms": {
+        "median": 324.409,
+        "minimum": 298.891,
+        "maximum": 564.959
+      },
+      "acquire_mean_ms": {
+        "median": 59.137,
+        "minimum": 57.383,
+        "maximum": 163.925
+      },
+      "acquire_p95_ms": {
+        "median": 151.514,
+        "minimum": 88.425,
+        "maximum": 533.383
+      },
+      "database_total_mean_ms": {
+        "median": 89.581,
+        "minimum": 89.196,
+        "maximum": 180.314
+      },
+      "database_total_p95_ms": {
+        "median": 205.099,
+        "minimum": 132.681,
+        "maximum": 538.764
+      },
+      "peak_waiters": null
+    },
+    "dynamic-4-8": {
+      "configuration": "dynamic-4-8",
+      "run_count": 3,
+      "run_ids": [
+        "database-connection-dynamic-4-8-warm-20260713T034133134290Z",
+        "database-connection-dynamic-4-8-warm-20260713T034758812402Z",
+        "database-connection-dynamic-4-8-warm-20260713T035004463609Z"
+      ],
+      "throughput_rps": {
+        "median": 167.791,
+        "minimum": 154.947,
+        "maximum": 192.182
+      },
+      "client_mean_ms": {
+        "median": 112.023,
+        "minimum": 99.994,
+        "maximum": 122.776
+      },
+      "client_p95_ms": {
+        "median": 190.561,
+        "minimum": 171.988,
+        "maximum": 197.766
+      },
+      "acquire_mean_ms": {
+        "median": 2.637,
+        "minimum": 1.677,
+        "maximum": 2.947
+      },
+      "acquire_p95_ms": {
+        "median": 19.97,
+        "minimum": 12.031,
+        "maximum": 20.338
+      },
+      "database_total_mean_ms": {
+        "median": 23.351,
+        "minimum": 17.78,
+        "maximum": 23.606
+      },
+      "database_total_p95_ms": {
+        "median": 47.63,
+        "minimum": 36.988,
+        "maximum": 63.986
+      },
+      "peak_waiters": {
+        "median": 4.0,
+        "minimum": 4.0,
+        "maximum": 7.0
+      }
+    },
+    "fixed-8": {
+      "configuration": "fixed-8",
+      "run_count": 3,
+      "run_ids": [
+        "database-connection-fixed-8-warm-20260713T034327375212Z",
+        "database-connection-fixed-8-warm-20260713T034512016994Z",
+        "database-connection-fixed-8-warm-20260713T035143063941Z"
+      ],
+      "throughput_rps": {
+        "median": 180.398,
+        "minimum": 166.965,
+        "maximum": 191.306
+      },
+      "client_mean_ms": {
+        "median": 104.892,
+        "minimum": 98.329,
+        "maximum": 115.502
+      },
+      "client_p95_ms": {
+        "median": 159.142,
+        "minimum": 154.947,
+        "maximum": 200.408
+      },
+      "acquire_mean_ms": {
+        "median": 2.796,
+        "minimum": 1.112,
+        "maximum": 7.016
+      },
+      "acquire_p95_ms": {
+        "median": 15.828,
+        "minimum": 8.103,
+        "maximum": 41.354
+      },
+      "database_total_mean_ms": {
+        "median": 24.178,
+        "minimum": 22.556,
+        "maximum": 36.913
+      },
+      "database_total_p95_ms": {
+        "median": 55.86,
+        "minimum": 42.777,
+        "maximum": 84.155
+      },
+      "peak_waiters": {
+        "median": 8.0,
+        "minimum": 4.0,
+        "maximum": 8.0
+      }
+    }
+  },
+  "comparisons": {
+    "dynamic_4_8_relative_to_direct": {
+      "throughput_gain_percent": 76.641,
+      "client_p95_reduction_percent": 41.259,
+      "acquire_p95_reduction_percent": 86.82,
+      "database_total_p95_reduction_percent": 76.777
+    },
+    "fixed_8_relative_to_direct": {
+      "throughput_gain_percent": 89.913,
+      "client_p95_reduction_percent": 50.944,
+      "acquire_p95_reduction_percent": 89.553,
+      "database_total_p95_reduction_percent": 72.764
+    },
+    "fixed_8_relative_to_dynamic_4_8": {
+      "throughput_gain_percent": 7.514,
+      "client_p95_reduction_percent": 16.488,
+      "acquire_p95_reduction_percent": 20.741,
+      "database_total_p95_reduction_percent": -17.279
+    }
+  }
+}
