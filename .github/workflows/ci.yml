@@ -28,6 +28,7 @@ jobs:
 
     env:
       PYTHONPATH: ${{ github.workspace }}
+      DATABASE_CONNECTION_STRATEGY: connection_per_operation
 
     steps:
       - name: Checkout repository
