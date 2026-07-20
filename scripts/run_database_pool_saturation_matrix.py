@@ -112,9 +112,11 @@ def run_study(
     stabilization_seconds: float,
     connect_timeout_seconds: float,
     read_timeout_seconds: float,
+    connection_hold_ms: int,
 ) -> tuple[dict[str, Any], Path]:
     configuration_label = (
-        f"saturation-c{concurrency:02d}-r{repetition:02d}"
+        f"saturation-h{connection_hold_ms:04d}ms-"
+        f"c{concurrency:02d}-r{repetition:02d}"
     )
 
     command = [
@@ -138,10 +140,13 @@ def run_study(
         str(connect_timeout_seconds),
         "--read-timeout-seconds",
         str(read_timeout_seconds),
+        "--connection-hold-ms",
+        str(connection_hold_ms),
     ]
 
     print(
         "\nRunning matrix point: "
+        f"connection_hold_ms={connection_hold_ms}, "
         f"concurrency={concurrency}, "
         f"repetition={repetition}"
     )
@@ -194,6 +199,15 @@ def run_study(
     summary = json.loads(
         summary_path.read_text(encoding="utf-8")
     )
+
+    actual_hold_ms = summary.get("connection_hold_ms")
+
+    if actual_hold_ms != connection_hold_ms:
+        raise RuntimeError(
+            "Study summary connection hold mismatch: "
+            f"expected {connection_hold_ms!r}, "
+            f"received {actual_hold_ms!r}"
+        )
 
     return summary, evidence_directory
 
@@ -301,6 +315,7 @@ def flatten_result(
 
     return {
         "run_id": summary["run_id"],
+        "connection_hold_ms": summary["connection_hold_ms"],
         "concurrency": summary["concurrency"],
         "repetition": repetition,
         "request_count": summary["request_count"],
@@ -443,6 +458,7 @@ def write_csv(
 def write_markdown_report(
     *,
     matrix_run_id: str,
+    connection_hold_ms: int,
     summaries: list[dict[str, Any]],
     path: Path,
 ) -> None:
@@ -450,6 +466,7 @@ def write_markdown_report(
         "# Database Connection Pool Saturation Matrix",
         "",
         f"Matrix run ID: `{matrix_run_id}`",
+        f"Connection hold: {connection_hold_ms} ms",
         "",
         "| Concurrency | Median RPS | Client p95 ms | "
         "Acquire p95 ms | DB total p95 ms | "
@@ -517,6 +534,15 @@ def parse_arguments() -> argparse.Namespace:
         default=240,
     )
     parser.add_argument(
+        "--connection-hold-ms",
+        type=int,
+        default=0,
+        help=(
+            "Milliseconds to hold each checked-out database "
+            "connection before query execution (0-1000)."
+        ),
+    )
+    parser.add_argument(
         "--warmup-count",
         type=int,
         default=20,
@@ -553,6 +579,12 @@ def parse_arguments() -> argparse.Namespace:
 def main() -> int:
     args = parse_arguments()
 
+    if not 0 <= args.connection_hold_ms <= 1000:
+        raise ValueError(
+            "--connection-hold-ms must be between "
+            "0 and 1000"
+        )
+
     for concurrency in args.concurrencies:
         if args.request_count % concurrency != 0:
             raise ValueError(
@@ -578,6 +610,10 @@ def main() -> int:
     print(f"Concurrencies: {args.concurrencies}")
     print(f"Repetitions: {args.repetitions}")
     print(f"Request count per run: {args.request_count}")
+    print(
+        "Connection hold per request: "
+        f"{args.connection_hold_ms} ms"
+    )
 
     for concurrency in args.concurrencies:
         for repetition in range(
@@ -602,6 +638,9 @@ def main() -> int:
                 ),
                 read_timeout_seconds=(
                     args.read_timeout_seconds
+                ),
+                connection_hold_ms=(
+                    args.connection_hold_ms
                 ),
             )
 
@@ -634,6 +673,7 @@ def main() -> int:
             "concurrencies": args.concurrencies,
             "repetitions": args.repetitions,
             "request_count_per_run": args.request_count,
+            "connection_hold_ms": args.connection_hold_ms,
             "warmup_count": args.warmup_count,
             "stabilization_seconds": (
                 args.stabilization_seconds
@@ -662,6 +702,7 @@ def main() -> int:
 
     write_markdown_report(
         matrix_run_id=matrix_run_id,
+        connection_hold_ms=args.connection_hold_ms,
         summaries=summaries,
         path=output_directory / "report.md",
     )
