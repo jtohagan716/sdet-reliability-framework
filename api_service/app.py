@@ -579,11 +579,21 @@ async def validate_idempotency_behavior(
 @app.get("/qa/database-connection-timing")
 def database_connection_timing(
     patient_id: int = 1001,
+    connection_hold_ms: int = 0,
 ):
     if os.getenv("ENABLE_QA_ENDPOINTS", "false").lower() != "true":
         raise HTTPException(
             status_code=404,
             detail="QA endpoints are disabled",
+        )
+
+    if not 0 <= connection_hold_ms <= 1000:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "connection_hold_ms must be between "
+                "0 and 1000 milliseconds"
+            ),
         )
 
     timings = DatabasePhaseTimings()
@@ -592,6 +602,7 @@ def database_connection_timing(
         patient_id,
         defect_mode=PATIENT_LOOKUP_DEFECT_MODE,
         timings=timings,
+        connection_hold_ms=connection_hold_ms,
     )
 
     if patient is None:
@@ -604,6 +615,7 @@ def database_connection_timing(
 
     return {
         "patient_id": patient_id,
+        "connection_hold_ms": connection_hold_ms,
         "connection_strategy": resource_status[
             "connection_strategy"
         ],
