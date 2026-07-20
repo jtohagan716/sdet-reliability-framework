@@ -27,6 +27,18 @@ from api_service.repositories.data_quality_reviews import (
     list_review_items,
 )
 from api_service.database_timings import DatabasePhaseTimings
+from api_service.repositories.patients import get_patient_summary_from_postgres
+from api_service.repositories.data_quality_reviews import (
+    VALID_REVIEW_STATUSES,
+    get_review_item_detail,
+    list_review_items,
+)
+from api_service.repositories.encounter_batches import (
+    MAX_BATCH_SIZE,
+    EncounterBatchProcessingError,
+    process_scheduled_encounter_batch,
+)
+from api_service.database_timings import DatabasePhaseTimings
 
 
 TRUSTED_ISSUER = "https://company-login.com"
@@ -623,6 +635,107 @@ def database_connection_timing(
         "database_resources": resource_status,
     }
 
+@app.post("/qa/background-encounter-batch")
+def background_encounter_batch(
+    request: Request,
+    batch_size: int = 1,
+    worker_id: str = "background-encounter-worker",
+):
+    """
+    Process a controlled batch of scheduled encounters.
+
+    This QA-only endpoint provides a legitimate background database workload
+    for foreground-versus-background connection-pool isolation experiments.
+    """
+
+    if os.getenv("ENABLE_QA_ENDPOINTS", "false").lower() != "true":
+        raise HTTPException(
+            status_code=404,
+            detail="QA endpoints are disabled",
+        )
+
+    if not 1 <= batch_size <= MAX_BATCH_SIZE:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"batch_size must be between "
+                f"1 and {MAX_BATCH_SIZE}"
+            ),
+        )
+
+    request_id = request.state.request_id
+    timings = DatabasePhaseTimings()
+
+    logger.info(
+        "background_encounter_batch_started "
+        "request_id=%s worker_id=%s batch_size=%s",
+        request_id,
+        worker_id,
+        batch_size,
+    )
+
+    try:
+        result = process_scheduled_encounter_batch(
+            batch_size=batch_size,
+            worker_id=worker_id,
+            batch_id=request_id,
+            timings=timings,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422,
+            detail=str(error),
+        ) from error
+    except EncounterBatchProcessingError as error:
+        logger.exception(
+            "background_encounter_batch_validation_failed "
+            "request_id=%s worker_id=%s batch_size=%s",
+            request_id,
+            worker_id,
+            batch_size,
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="BACKGROUND_BATCH_VALIDATION_FAILED",
+        ) from error
+    except Exception as error:
+        logger.exception(
+            "background_encounter_batch_failed "
+            "request_id=%s worker_id=%s batch_size=%s",
+            request_id,
+            worker_id,
+            batch_size,
+        )
+
+        raise HTTPException(
+            status_code=503,
+            detail="BACKGROUND_DATABASE_WORKLOAD_UNAVAILABLE",
+        ) from error
+
+    resource_status = get_database_resource_status()
+
+    logger.info(
+        "background_encounter_batch_completed "
+        "request_id=%s worker_id=%s selected_count=%s "
+        "updated_count=%s audit_count=%s total_ms=%.3f",
+        request_id,
+        worker_id,
+        result["selected_count"],
+        result["updated_count"],
+        result["audit_count"],
+        timings.total_ms,
+    )
+
+    return {
+        "workload_type": "background_encounter_batch",
+        "connection_strategy": resource_status[
+            "connection_strategy"
+        ],
+        "database_resources": resource_status,
+        **result,
+    }
+
 @app.get(
     "/patients/{patient_id}",
     response_model=PatientSummary,
@@ -843,3 +956,9 @@ def get_patient_data_quality_review_item(review_item_key: str):
         raise HTTPException(status_code=404, detail="REVIEW_ITEM_NOT_FOUND")
 
     return review_item
+
+    from api_service.repositories.encounter_batches import (
+    MAX_BATCH_SIZE,
+    EncounterBatchProcessingError,
+    process_scheduled_encounter_batch,
+)
