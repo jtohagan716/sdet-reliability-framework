@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import json
 import math
 import os
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
-from datetime import UTC, datetime
+from dataclasses import asdict, dataclass
+from datetime import UTC, date, datetime
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -28,8 +31,12 @@ except ModuleNotFoundError:
     )
 
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+TEST_RUNS_DIRECTORY = REPOSITORY_ROOT / "reports" / "test-runs"
+
 DEFAULT_API_BASE_URL = "http://localhost:8000"
 EXPECTED_CONNECTION_STRATEGY = "bounded_pool"
+SCENARIO_NAME = "shared_pool_mixed_workload"
 
 DATABASE_PHASE_NAMES = (
     "acquire_ms",
@@ -37,6 +44,41 @@ DATABASE_PHASE_NAMES = (
     "fetch_ms",
     "release_ms",
     "total_ms",
+)
+
+CSV_FIELD_NAMES = (
+    "run_id",
+    "workload_type",
+    "worker_number",
+    "sequence_number",
+    "request_phase",
+    "request_number",
+    "request_id",
+    "client_started_at_utc",
+    "client_finished_at_utc",
+    "client_elapsed_ms",
+    "status_code",
+    "response_request_id",
+    "outcome",
+    "error_type",
+    "error_message",
+    "connection_strategy",
+    "requested_batch_size",
+    "selected_count",
+    "updated_count",
+    "audit_count",
+    "encounter_ids",
+    "trace_id",
+    "span_id",
+    "acquire_ms",
+    "query_ms",
+    "fetch_ms",
+    "release_ms",
+    "database_total_ms",
+    "pool_size",
+    "pool_available",
+    "requests_waiting",
+    "requests_queued",
 )
 
 
@@ -194,6 +236,115 @@ def metric_summary(
     }
 
 
+def classify_request_phase(
+    sequence_number: int,
+) -> str:
+    """Classify a worker request as first-wave or later work."""
+
+    if sequence_number <= 0:
+        raise ValueError(
+            "sequence number must be greater than zero"
+        )
+
+    if sequence_number == 1:
+        return "first_request"
+
+    return "later_requests"
+
+
+def average_metric(
+    values: list[float],
+) -> float | None:
+    """Return a three-decimal arithmetic mean."""
+
+    if not values:
+        return None
+
+    return round(sum(values) / len(values), 3)
+
+
+def summarize_request_phase_rows(
+    rows: list[dict[str, Any]],
+) -> dict[str, float | int | None]:
+    """Summarize client, database, and outside-database latency."""
+
+    client_values = [
+        float(row["client_elapsed_ms"])
+        for row in rows
+    ]
+
+    database_values = [
+        float(row["database_total_ms"])
+        for row in rows
+    ]
+
+    outside_database_values = [
+        round(
+            float(row["client_elapsed_ms"])
+            - float(row["database_total_ms"]),
+            3,
+        )
+        for row in rows
+    ]
+
+    return {
+        "count": len(rows),
+        "average_client_ms": average_metric(client_values),
+        "average_database_ms": average_metric(database_values),
+        "average_outside_database_ms": average_metric(
+            outside_database_values
+        ),
+    }
+
+
+def summarize_request_phases(
+    rows: list[dict[str, Any]],
+) -> dict[str, dict[str, dict[str, float | int | None]]]:
+    """Separate first requests from later steady-state requests."""
+
+    summary: dict[
+        str,
+        dict[str, dict[str, float | int | None]],
+    ] = {}
+
+    for workload_type in ("foreground", "background"):
+        successful_rows = [
+            row
+            for row in rows
+            if row.get("workload_type") == workload_type
+            and row.get("outcome") == "success"
+        ]
+
+        first_request_rows = [
+            row
+            for row in successful_rows
+            if classify_request_phase(
+                int(row["sequence_number"])
+            )
+            == "first_request"
+        ]
+
+        later_request_rows = [
+            row
+            for row in successful_rows
+            if classify_request_phase(
+                int(row["sequence_number"])
+            )
+            == "later_requests"
+        ]
+
+        summary[workload_type] = {
+            "first_request": summarize_request_phase_rows(
+                first_request_rows
+            ),
+            "later_requests": summarize_request_phase_rows(
+                later_request_rows
+            ),
+        }
+
+    return summary
+
+
 def extract_database_timings(
     payload: dict[str, Any],
     *,
@@ -291,6 +442,7 @@ def build_base_row(
         "workload_type": workload_type,
         "worker_number": worker_number,
         "sequence_number": sequence_number,
+        "request_phase": classify_request_phase(sequence_number),
         "request_number": request_number,
         "request_id": request_id,
         "client_started_at_utc": utc_timestamp(),
@@ -333,6 +485,8 @@ def build_failure_row(
         "updated_count": "",
         "audit_count": "",
         "encounter_ids": [],
+        "trace_id": "",
+        "span_id": "",
         "acquire_ms": "",
         "query_ms": "",
         "fetch_ms": "",
@@ -480,6 +634,8 @@ def execute_foreground_worker(
                         "updated_count": "",
                         "audit_count": "",
                         "encounter_ids": [],
+                        "trace_id": payload.get("trace_id", ""),
+                        "span_id": payload.get("span_id", ""),
                         "acquire_ms": timings["acquire_ms"],
                         "query_ms": timings["query_ms"],
                         "fetch_ms": timings["fetch_ms"],
@@ -680,6 +836,8 @@ def execute_background_worker(
                         "updated_count": payload["updated_count"],
                         "audit_count": payload["audit_count"],
                         "encounter_ids": encounter_ids,
+                        "trace_id": payload.get("trace_id", ""),
+                        "span_id": payload.get("span_id", ""),
                         "acquire_ms": timings["acquire_ms"],
                         "query_ms": timings["query_ms"],
                         "fetch_ms": timings["fetch_ms"],
@@ -767,63 +925,826 @@ def run_mixed_workload(
     return rows, elapsed_seconds
 
 
-def summarize_smoke_run(
+def successful_metric_values(
+    rows: list[dict[str, Any]],
+    field_name: str,
+) -> list[float]:
+    """Return successful numeric measurements for one field."""
+
+    values: list[float] = []
+
+    for row in rows:
+        if row.get("outcome") != "success":
+            continue
+
+        value = row.get(field_name)
+
+        if value in ("", None):
+            continue
+
+        values.append(float(value))
+
+    return values
+
+
+def integer_observations(
+    rows: list[dict[str, Any]],
+    field_name: str,
+) -> list[int]:
+    """Return successful integer observations for one field."""
+
+    values: list[int] = []
+
+    for row in rows:
+        if row.get("outcome") != "success":
+            continue
+
+        value = row.get(field_name)
+
+        if value in ("", None):
+            continue
+
+        values.append(int(value))
+
+    return values
+
+
+def summarize_workload(
+    rows: list[dict[str, Any]],
+    *,
+    workload_type: str,
+    elapsed_seconds: float,
+) -> dict[str, Any]:
+    """Build a complete summary for one workload type."""
+
+    matching_rows = [
+        row
+        for row in rows
+        if row["workload_type"] == workload_type
+    ]
+
+    successful_rows = [
+        row
+        for row in matching_rows
+        if row["outcome"] == "success"
+    ]
+
+    failed_rows = [
+        row
+        for row in matching_rows
+        if row["outcome"] != "success"
+    ]
+
+    pool_sizes = integer_observations(
+        successful_rows,
+        "pool_size",
+    )
+
+    pool_available = integer_observations(
+        successful_rows,
+        "pool_available",
+    )
+
+    requests_waiting = integer_observations(
+        successful_rows,
+        "requests_waiting",
+    )
+
+    requests_queued = integer_observations(
+        successful_rows,
+        "requests_queued",
+    )
+
+    selected_count = sum(
+        int(row["selected_count"])
+        for row in successful_rows
+        if row["selected_count"] not in ("", None)
+    )
+
+    updated_count = sum(
+        int(row["updated_count"])
+        for row in successful_rows
+        if row["updated_count"] not in ("", None)
+    )
+
+    audit_count = sum(
+        int(row["audit_count"])
+        for row in successful_rows
+        if row["audit_count"] not in ("", None)
+    )
+
+    return {
+        "request_count": len(matching_rows),
+        "success_count": len(successful_rows),
+        "failure_count": len(failed_rows),
+        "success_rate_percent": (
+            round(
+                100 * len(successful_rows) / len(matching_rows),
+                3,
+            )
+            if matching_rows
+            else 0.0
+        ),
+        "throughput_requests_per_second": (
+            round(len(matching_rows) / elapsed_seconds, 3)
+            if elapsed_seconds > 0
+            else 0.0
+        ),
+        "metrics": {
+            "client_elapsed_ms": metric_summary(
+                successful_metric_values(
+                    successful_rows,
+                    "client_elapsed_ms",
+                )
+            ),
+            "database_acquire_ms": metric_summary(
+                successful_metric_values(
+                    successful_rows,
+                    "acquire_ms",
+                )
+            ),
+            "database_query_ms": metric_summary(
+                successful_metric_values(
+                    successful_rows,
+                    "query_ms",
+                )
+            ),
+            "database_fetch_ms": metric_summary(
+                successful_metric_values(
+                    successful_rows,
+                    "fetch_ms",
+                )
+            ),
+            "database_release_ms": metric_summary(
+                successful_metric_values(
+                    successful_rows,
+                    "release_ms",
+                )
+            ),
+            "database_total_ms": metric_summary(
+                successful_metric_values(
+                    successful_rows,
+                    "database_total_ms",
+                )
+            ),
+        },
+        "pool_observations": {
+            "peak_pool_size": (
+                max(pool_sizes)
+                if pool_sizes
+                else None
+            ),
+            "minimum_pool_available": (
+                min(pool_available)
+                if pool_available
+                else None
+            ),
+            "peak_requests_waiting": (
+                max(requests_waiting)
+                if requests_waiting
+                else None
+            ),
+            "peak_requests_queued": (
+                max(requests_queued)
+                if requests_queued
+                else None
+            ),
+        },
+        "database_work": {
+            "selected_count": selected_count,
+            "updated_count": updated_count,
+            "audit_count": audit_count,
+        },
+        "failures": [
+            {
+                "request_id": row["request_id"],
+                "status_code": row["status_code"],
+                "error_type": row["error_type"],
+                "error_message": row["error_message"],
+            }
+            for row in failed_rows
+        ],
+    }
+
+
+def summarize_run(
     rows: list[dict[str, Any]],
     *,
     elapsed_seconds: float,
 ) -> dict[str, Any]:
-    """Build a compact console summary for the first live run."""
+    """Build the complete mixed-workload run summary."""
 
-    summary: dict[str, Any] = {
+    foreground = summarize_workload(
+        rows,
+        workload_type="foreground",
+        elapsed_seconds=elapsed_seconds,
+    )
+
+    background = summarize_workload(
+        rows,
+        workload_type="background",
+        elapsed_seconds=elapsed_seconds,
+    )
+
+    return {
         "elapsed_seconds": round(elapsed_seconds, 3),
+        "total_request_count": len(rows),
+        "total_success_count": (
+            foreground["success_count"]
+            + background["success_count"]
+        ),
+        "total_failure_count": (
+            foreground["failure_count"]
+            + background["failure_count"]
+        ),
+        "foreground": foreground,
+        "background": background,
+        "request_phases": summarize_request_phases(rows),
     }
 
-    for workload_type in ("foreground", "background"):
-        matching_rows = [
-            row
-            for row in rows
-            if row["workload_type"] == workload_type
-        ]
 
-        successful_rows = [
-            row
-            for row in matching_rows
-            if row["outcome"] == "success"
-        ]
+def configuration_to_dict(
+    configuration: MixedWorkloadConfiguration,
+) -> dict[str, Any]:
+    """Convert the immutable configuration to report data."""
 
-        failed_rows = [
-            row
-            for row in matching_rows
-            if row["outcome"] != "success"
-        ]
-
-        summary[workload_type] = {
-            "request_count": len(matching_rows),
-            "success_count": len(successful_rows),
-            "failure_count": len(failed_rows),
-            "client_elapsed_ms": metric_summary(
-                [
-                    float(row["client_elapsed_ms"])
-                    for row in successful_rows
-                ]
+    return {
+        "foreground": {
+            **asdict(configuration.foreground),
+            "requests_per_worker": (
+                configuration.foreground.requests_per_worker
             ),
-            "database_acquire_ms": metric_summary(
-                [
-                    float(row["acquire_ms"])
-                    for row in successful_rows
-                ]
+            "connection_hold_ms": (
+                configuration.foreground_connection_hold_ms
             ),
-            "failures": [
-                {
-                    "request_id": row["request_id"],
-                    "error_type": row["error_type"],
-                    "error_message": row["error_message"],
-                }
-                for row in failed_rows
-            ],
+        },
+        "background": {
+            **asdict(configuration.background),
+            "requests_per_worker": (
+                configuration.background.requests_per_worker
+            ),
+            "batch_size": configuration.background_batch_size,
+            "required_encounter_count": (
+                configuration.required_encounter_count
+            ),
+        },
+        "combined": {
+            "total_concurrency": (
+                configuration.total_concurrency
+            ),
+            "connect_timeout_seconds": (
+                configuration.connect_timeout_seconds
+            ),
+            "read_timeout_seconds": (
+                configuration.read_timeout_seconds
+            ),
+        },
+    }
+
+
+def dataset_to_dict(
+    dataset: EncounterWorkloadDataset,
+) -> dict[str, Any]:
+    """Convert the deterministic dataset definition to report data."""
+
+    return {
+        "encounter_ids": list(dataset.encounter_ids),
+        "record_count": dataset.record_count,
+        "encounter_date": dataset.encounter_date.isoformat(),
+        "encounter_type": dataset.encounter_type,
+    }
+
+
+def json_safe(value: Any) -> Any:
+    """Convert report values to JSON-compatible types."""
+
+    if isinstance(value, dict):
+        return {
+            str(key): json_safe(item)
+            for key, item in value.items()
         }
 
-    return summary
+    if isinstance(value, (list, tuple, set)):
+        return [
+            json_safe(item)
+            for item in value
+        ]
+
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+
+    if isinstance(value, Path):
+        return str(value)
+
+    return value
+
+
+def csv_safe(value: Any) -> Any:
+    """Convert structured row values to stable CSV text."""
+
+    if isinstance(value, (dict, list, tuple, set)):
+        return json.dumps(
+            json_safe(value),
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+
+    if value is None:
+        return ""
+
+    return value
+
+
+def create_run_directory(run_id: str) -> Path:
+    """Create one isolated artifact directory for the run."""
+
+    run_directory = TEST_RUNS_DIRECTORY / run_id
+    run_directory.mkdir(parents=True, exist_ok=False)
+
+    return run_directory
+
+
+def write_request_csv(
+    run_directory: Path,
+    rows: list[dict[str, Any]],
+) -> Path:
+    """Write one raw request row per HTTP operation."""
+
+    output_path = run_directory / "request-results.csv"
+
+    with output_path.open(
+        "w",
+        encoding="utf-8",
+        newline="",
+    ) as output_file:
+        writer = csv.DictWriter(
+            output_file,
+            fieldnames=CSV_FIELD_NAMES,
+            extrasaction="ignore",
+        )
+
+        writer.writeheader()
+
+        for row in rows:
+            writer.writerow(
+                {
+                    field_name: csv_safe(
+                        row.get(field_name, "")
+                    )
+                    for field_name in CSV_FIELD_NAMES
+                }
+            )
+
+    return output_path
+
+
+def write_json_report(
+    run_directory: Path,
+    report: dict[str, Any],
+) -> Path:
+    """Write the complete machine-readable run report."""
+
+    output_path = run_directory / "run-report.json"
+
+    output_path.write_text(
+        json.dumps(
+            json_safe(report),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    return output_path
+
+
+def format_markdown_value(value: Any) -> str:
+    """Format one report value for a Markdown table."""
+
+    if value is None:
+        return "n/a"
+
+    if isinstance(value, float):
+        return f"{value:.3f}"
+
+    return str(value)
+
+
+def metric_markdown_rows(
+    metrics: dict[str, dict[str, Any]],
+) -> list[str]:
+    """Build Markdown table rows for latency metrics."""
+
+    display_names = {
+        "client_elapsed_ms": "Client elapsed",
+        "database_acquire_ms": "Database acquire",
+        "database_query_ms": "Database query",
+        "database_fetch_ms": "Database fetch",
+        "database_release_ms": "Database release",
+        "database_total_ms": "Database total",
+    }
+
+    rows = [
+        "| Metric | Count | Min ms | Mean ms | "
+        "P50 ms | P95 ms | P99 ms | Max ms |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+
+    for metric_name, summary in metrics.items():
+        rows.append(
+            "| "
+            + " | ".join(
+                [
+                    display_names.get(
+                        metric_name,
+                        metric_name,
+                    ),
+                    format_markdown_value(
+                        summary["count"]
+                    ),
+                    format_markdown_value(
+                        summary["minimum_ms"]
+                    ),
+                    format_markdown_value(
+                        summary["mean_ms"]
+                    ),
+                    format_markdown_value(
+                        summary["p50_ms"]
+                    ),
+                    format_markdown_value(
+                        summary["p95_ms"]
+                    ),
+                    format_markdown_value(
+                        summary["p99_ms"]
+                    ),
+                    format_markdown_value(
+                        summary["maximum_ms"]
+                    ),
+                ]
+            )
+            + " |"
+        )
+
+    return rows
+
+
+def request_phase_markdown_section(
+    request_phases: dict[str, Any],
+) -> list[str]:
+    """Build first-request and later-request comparison tables."""
+
+    lines = [
+        "## First-request versus later-request behavior",
+        "",
+        (
+            "The first request from each worker is reported separately "
+            "from later requests so first-use overhead does not obscure "
+            "steady-state behavior."
+        ),
+        "",
+        "| Workload | Phase | Count | Average client ms | "
+        "Average database ms | Average outside-database ms |",
+        "|---|---|---:|---:|---:|---:|",
+    ]
+
+    for workload_type in ("foreground", "background"):
+        for phase_name in (
+            "first_request",
+            "later_requests",
+        ):
+            phase_summary = request_phases[
+                workload_type
+            ][phase_name]
+
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        workload_type.capitalize(),
+                        phase_name,
+                        format_markdown_value(
+                            phase_summary["count"]
+                        ),
+                        format_markdown_value(
+                            phase_summary["average_client_ms"]
+                        ),
+                        format_markdown_value(
+                            phase_summary["average_database_ms"]
+                        ),
+                        format_markdown_value(
+                            phase_summary[
+                                "average_outside_database_ms"
+                            ]
+                        ),
+                    ]
+                )
+                + " |"
+            )
+
+    return lines
+
+
+def workload_markdown_section(
+    workload_name: str,
+    summary: dict[str, Any],
+) -> list[str]:
+    """Build one workload section for the Markdown report."""
+
+    title = workload_name.capitalize()
+
+    lines = [
+        f"## {title} workload",
+        "",
+        f"- Requests: {summary['request_count']}",
+        f"- Successes: {summary['success_count']}",
+        f"- Failures: {summary['failure_count']}",
+        (
+            "- Success rate: "
+            f"{summary['success_rate_percent']:.3f}%"
+        ),
+        (
+            "- Observed completion rate: "
+            f"{summary['throughput_requests_per_second']:.3f} "
+            "requests/second during the combined run"
+        ),
+        "",
+        "### Latency distribution",
+        "",
+        *metric_markdown_rows(summary["metrics"]),
+        "",
+        "### Connection-pool observations",
+        "",
+        (
+            "- Peak reported pool size: "
+            f"{format_markdown_value(
+                summary['pool_observations']['peak_pool_size']
+            )}"
+        ),
+        (
+            "- Minimum reported available connections: "
+            f"{format_markdown_value(
+                summary['pool_observations'][
+                    'minimum_pool_available'
+                ]
+            )}"
+        ),
+        (
+            "- Peak reported requests waiting: "
+            f"{format_markdown_value(
+                summary['pool_observations'][
+                    'peak_requests_waiting'
+                ]
+            )}"
+        ),
+        (
+            "- Peak reported requests queued: "
+            f"{format_markdown_value(
+                summary['pool_observations'][
+                    'peak_requests_queued'
+                ]
+            )}"
+        ),
+    ]
+
+    if workload_name == "background":
+        database_work = summary["database_work"]
+
+        lines.extend(
+            [
+                "",
+                "### Transactional work",
+                "",
+                (
+                    "- Encounters selected: "
+                    f"{database_work['selected_count']}"
+                ),
+                (
+                    "- Encounters updated: "
+                    f"{database_work['updated_count']}"
+                ),
+                (
+                    "- Audit rows validated: "
+                    f"{database_work['audit_count']}"
+                ),
+            ]
+        )
+
+    if summary["failures"]:
+        lines.extend(
+            [
+                "",
+                "### Failures",
+                "",
+            ]
+        )
+
+        for failure in summary["failures"]:
+            lines.append(
+                "- "
+                f"`{failure['request_id']}`: "
+                f"{failure['error_type']} — "
+                f"{failure['error_message']}"
+            )
+
+    return lines
+
+
+def write_markdown_report(
+    run_directory: Path,
+    report: dict[str, Any],
+) -> Path:
+    """Write the human-readable experiment report."""
+
+    configuration = report["configuration"]
+    summary = report["summary"]
+    cleanup = report["cleanup"]
+
+    lines = [
+        "# Foreground vs. Background Workload Run",
+        "",
+        f"- Run ID: `{report['run_id']}`",
+        f"- Scenario: `{report['scenario']}`",
+        f"- API base URL: `{report['api_base_url']}`",
+        (
+            "- Connection strategy expected: "
+            f"`{report['expected_connection_strategy']}`"
+        ),
+        (
+            "- Started UTC: "
+            f"`{report['execution']['started_at_utc']}`"
+        ),
+        (
+            "- Finished UTC: "
+            f"`{report['execution']['finished_at_utc']}`"
+        ),
+        (
+            "- Elapsed seconds: "
+            f"{summary['elapsed_seconds']:.3f}"
+        ),
+        "",
+        "## Purpose",
+        "",
+        (
+            "Measure latency-sensitive foreground API requests and "
+            "transactional background encounter batches while both "
+            "use the same bounded database connection pool."
+        ),
+        "",
+        "## Configuration",
+        "",
+        "| Setting | Value |",
+        "|---|---:|",
+        (
+            "| Foreground requests | "
+            f"{configuration['foreground']['request_count']} |"
+        ),
+        (
+            "| Foreground concurrency | "
+            f"{configuration['foreground']['concurrency']} |"
+        ),
+        (
+            "| Foreground requests per worker | "
+            f"{configuration['foreground']['requests_per_worker']} |"
+        ),
+        (
+            "| Foreground connection hold ms | "
+            f"{configuration['foreground']['connection_hold_ms']} |"
+        ),
+        (
+            "| Background requests | "
+            f"{configuration['background']['request_count']} |"
+        ),
+        (
+            "| Background concurrency | "
+            f"{configuration['background']['concurrency']} |"
+        ),
+        (
+            "| Background requests per worker | "
+            f"{configuration['background']['requests_per_worker']} |"
+        ),
+        (
+            "| Background batch size | "
+            f"{configuration['background']['batch_size']} |"
+        ),
+        (
+            "| Required encounters | "
+            f"{configuration['background']['required_encounter_count']} |"
+        ),
+        (
+            "| Total concurrency | "
+            f"{configuration['combined']['total_concurrency']} |"
+        ),
+        (
+            "| Connect timeout seconds | "
+            f"{configuration['combined']['connect_timeout_seconds']} |"
+        ),
+        (
+            "| Read timeout seconds | "
+            f"{configuration['combined']['read_timeout_seconds']} |"
+        ),
+        "",
+        "## Overall result",
+        "",
+        f"- Total requests: {summary['total_request_count']}",
+        f"- Total successes: {summary['total_success_count']}",
+        f"- Total failures: {summary['total_failure_count']}",
+        (
+            "- Fatal runner error: "
+            f"{report['execution']['fatal_error'] or 'none'}"
+        ),
+        "",
+        *request_phase_markdown_section(
+            summary["request_phases"]
+        ),
+        "",
+        *workload_markdown_section(
+            "foreground",
+            summary["foreground"],
+        ),
+        "",
+        *workload_markdown_section(
+            "background",
+            summary["background"],
+        ),
+        "",
+        "## Deterministic data lifecycle",
+        "",
+        (
+            "- Prepared encounter count: "
+            f"{report['dataset']['record_count']}"
+        ),
+        (
+            "- Cleanup encounters deleted: "
+            f"{cleanup.get('encounters_deleted', 'n/a')}"
+        ),
+        (
+            "- Cleanup audit rows deleted: "
+            f"{cleanup.get('audit_rows_deleted', 'n/a')}"
+        ),
+        (
+            "- Cleanup error: "
+            f"{report['cleanup_error'] or 'none'}"
+        ),
+        "",
+        "## Interpretation boundary",
+        "",
+        (
+            "This individual run proves whether the configured mixed "
+            "workload completed correctly and records observed timing "
+            "and pool behavior. It does not, by itself, prove that "
+            "background activity caused foreground latency. Causal "
+            "claims require repeated foreground-only, shared-pool, "
+            "and isolated-pool comparisons under controlled settings."
+        ),
+        "",
+        "## Artifacts",
+        "",
+        "- `request-results.csv`: one row per HTTP request",
+        "- `run-report.json`: complete machine-readable evidence",
+        "- `run-report.md`: this human-readable report",
+        "",
+    ]
+
+    output_path = run_directory / "run-report.md"
+
+    output_path.write_text(
+        "\n".join(lines),
+        encoding="utf-8",
+    )
+
+    return output_path
+
+
+def write_run_artifacts(
+    *,
+    run_directory: Path,
+    rows: list[dict[str, Any]],
+    report: dict[str, Any],
+) -> dict[str, Path]:
+    """Write all evidence files for one experiment run."""
+
+    csv_path = write_request_csv(
+        run_directory,
+        rows,
+    )
+
+    json_path = write_json_report(
+        run_directory,
+        report,
+    )
+
+    markdown_path = write_markdown_report(
+        run_directory,
+        report,
+    )
+
+    return {
+        "run_directory": run_directory,
+        "request_csv": csv_path,
+        "json_report": json_path,
+        "markdown_report": markdown_path,
+    }
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -944,8 +1865,75 @@ def display_configuration(
     )
 
 
+def display_summary(
+    *,
+    run_id: str,
+    summary: dict[str, Any],
+    artifact_paths: dict[str, Path],
+    fatal_error: str,
+    cleanup_error: str,
+) -> None:
+    """Display the compact console result and artifact locations."""
+
+    print()
+    print("MIXED WORKLOAD RESULT")
+    print("---------------------")
+    print("Run ID:", run_id)
+    print("Elapsed seconds:", summary["elapsed_seconds"])
+
+    for workload_type in ("foreground", "background"):
+        workload_summary = summary[workload_type]
+        metrics = workload_summary["metrics"]
+
+        print()
+        print(workload_type.upper())
+        print("Requests:", workload_summary["request_count"])
+        print("Successes:", workload_summary["success_count"])
+        print("Failures:", workload_summary["failure_count"])
+        print(
+            "Client p50 ms:",
+            metrics["client_elapsed_ms"]["p50_ms"],
+        )
+        print(
+            "Client p95 ms:",
+            metrics["client_elapsed_ms"]["p95_ms"],
+        )
+        print(
+            "Acquire p95 ms:",
+            metrics["database_acquire_ms"]["p95_ms"],
+        )
+        print(
+            "Database total p95 ms:",
+            metrics["database_total_ms"]["p95_ms"],
+        )
+
+        for failure in workload_summary["failures"]:
+            print(
+                "Failure:",
+                failure["request_id"],
+                failure["error_type"],
+                failure["error_message"],
+            )
+
+    if fatal_error:
+        print()
+        print("Fatal runner error:", fatal_error)
+
+    if cleanup_error:
+        print()
+        print("Cleanup error:", cleanup_error)
+
+    print()
+    print("ARTIFACTS")
+    print("---------")
+    print("Run directory:", artifact_paths["run_directory"])
+    print("Request CSV:", artifact_paths["request_csv"])
+    print("JSON report:", artifact_paths["json_report"])
+    print("Markdown report:", artifact_paths["markdown_report"])
+
+
 def main() -> int:
-    """Prepare data, execute the mixed workload, and clean up."""
+    """Prepare data, execute the workload, and persist evidence."""
 
     arguments = parse_arguments()
     configuration = build_configuration(arguments)
@@ -957,6 +1945,8 @@ def main() -> int:
         "foreground-background-shared-pool-"
         "%Y%m%dT%H%M%S%fZ"
     )
+
+    run_directory = create_run_directory(run_id)
 
     dataset: EncounterWorkloadDataset = build_workload_dataset(
         configuration.required_encounter_count
@@ -974,6 +1964,11 @@ def main() -> int:
 
     rows: list[dict[str, Any]] = []
     elapsed_seconds = 0.0
+    fatal_error = ""
+    cleanup_error = ""
+    cleanup: dict[str, Any] = {}
+
+    execution_started_at_utc = utc_timestamp()
 
     try:
         print("Starting synchronized mixed workload...")
@@ -983,64 +1978,82 @@ def main() -> int:
             run_id=run_id,
             api_base_url=api_base_url,
         )
+    except Exception as error:
+        fatal_error = (
+            f"{type(error).__name__}: {error}"
+        )
     finally:
-        cleanup = remove_workload_dataset(dataset)
+        try:
+            cleanup = remove_workload_dataset(dataset)
 
-        print(
-            "Cleaned encounters:",
-            cleanup["encounters_deleted"],
-        )
-        print(
-            "Cleaned audit rows:",
-            cleanup["audit_rows_deleted"],
-        )
+            print(
+                "Cleaned encounters:",
+                cleanup["encounters_deleted"],
+            )
+            print(
+                "Cleaned audit rows:",
+                cleanup["audit_rows_deleted"],
+            )
+        except Exception as error:
+            cleanup_error = (
+                f"{type(error).__name__}: {error}"
+            )
 
-    summary = summarize_smoke_run(
+    execution_finished_at_utc = utc_timestamp()
+
+    summary = summarize_run(
         rows,
         elapsed_seconds=elapsed_seconds,
     )
 
-    print()
-    print("MIXED WORKLOAD SMOKE RESULT")
-    print("---------------------------")
-    print("Run ID:", run_id)
-    print("Elapsed seconds:", summary["elapsed_seconds"])
+    report = {
+        "run_id": run_id,
+        "scenario": SCENARIO_NAME,
+        "generated_at_utc": utc_timestamp(),
+        "api_base_url": api_base_url,
+        "expected_connection_strategy": (
+            EXPECTED_CONNECTION_STRATEGY
+        ),
+        "configuration": configuration_to_dict(
+            configuration
+        ),
+        "dataset": dataset_to_dict(dataset),
+        "preparation": preparation,
+        "execution": {
+            "started_at_utc": execution_started_at_utc,
+            "finished_at_utc": execution_finished_at_utc,
+            "elapsed_seconds": round(
+                elapsed_seconds,
+                3,
+            ),
+            "fatal_error": fatal_error,
+        },
+        "summary": summary,
+        "cleanup": cleanup,
+        "cleanup_error": cleanup_error,
+        "request_rows": rows,
+    }
 
-    for workload_type in ("foreground", "background"):
-        workload_summary = summary[workload_type]
-
-        print()
-        print(workload_type.upper())
-        print("Requests:", workload_summary["request_count"])
-        print("Successes:", workload_summary["success_count"])
-        print("Failures:", workload_summary["failure_count"])
-        print(
-            "Client p95 ms:",
-            workload_summary[
-                "client_elapsed_ms"
-            ]["p95_ms"],
-        )
-        print(
-            "Acquire p95 ms:",
-            workload_summary[
-                "database_acquire_ms"
-            ]["p95_ms"],
-        )
-
-        for failure in workload_summary["failures"]:
-            print(
-                "Failure:",
-                failure["request_id"],
-                failure["error_type"],
-                failure["error_message"],
-            )
-
-    total_failures = (
-        summary["foreground"]["failure_count"]
-        + summary["background"]["failure_count"]
+    artifact_paths = write_run_artifacts(
+        run_directory=run_directory,
+        rows=rows,
+        report=report,
     )
 
-    return 0 if total_failures == 0 else 1
+    display_summary(
+        run_id=run_id,
+        summary=summary,
+        artifact_paths=artifact_paths,
+        fatal_error=fatal_error,
+        cleanup_error=cleanup_error,
+    )
+
+    total_failures = summary["total_failure_count"]
+
+    if fatal_error or cleanup_error or total_failures:
+        return 1
+
+    return 0
 
 
 if __name__ == "__main__":
