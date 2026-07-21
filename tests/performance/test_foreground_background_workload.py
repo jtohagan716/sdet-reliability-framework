@@ -1,0 +1,485 @@
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+import scripts.run_foreground_background_workload as workload_runner
+
+
+def build_arguments(
+    **overrides: Any,
+) -> argparse.Namespace:
+    """Build valid command-line arguments with optional overrides."""
+
+    values: dict[str, Any] = {
+        "foreground_request_count": 20,
+        "foreground_concurrency": 4,
+        "foreground_connection_hold_ms": 0,
+        "background_request_count": 4,
+        "background_concurrency": 2,
+        "background_batch_size": 2,
+        "connect_timeout_seconds": 3.0,
+        "read_timeout_seconds": 15.0,
+    }
+
+    values.update(overrides)
+
+    return argparse.Namespace(**values)
+
+
+def test_build_configuration_uses_deterministic_worker_distribution() -> None:
+    """Each worker must receive an exact, repeatable request count."""
+
+    configuration = workload_runner.build_configuration(
+        build_arguments()
+    )
+
+    assert configuration.foreground.request_count == 20
+    assert configuration.foreground.concurrency == 4
+    assert configuration.foreground.requests_per_worker == 5
+
+    assert configuration.background.request_count == 4
+    assert configuration.background.concurrency == 2
+    assert configuration.background.requests_per_worker == 2
+
+    assert configuration.background_batch_size == 2
+    assert configuration.required_encounter_count == 8
+    assert configuration.total_concurrency == 6
+
+
+def test_foreground_request_count_must_be_positive() -> None:
+    """A workload cannot run without at least one request."""
+
+    with pytest.raises(
+        ValueError,
+        match="foreground request count must be greater than zero",
+    ):
+        workload_runner.build_configuration(
+            build_arguments(
+                foreground_request_count=0,
+            )
+        )
+
+
+def test_foreground_concurrency_must_be_positive() -> None:
+    """A workload cannot run without at least one worker."""
+
+    with pytest.raises(
+        ValueError,
+        match="foreground concurrency must be greater than zero",
+    ):
+        workload_runner.build_configuration(
+            build_arguments(
+                foreground_concurrency=0,
+            )
+        )
+
+
+def test_foreground_requests_must_divide_evenly() -> None:
+    """Worker request assignments must remain deterministic."""
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "foreground request count must be divisible by "
+            "foreground concurrency"
+        ),
+    ):
+        workload_runner.build_configuration(
+            build_arguments(
+                foreground_request_count=19,
+                foreground_concurrency=4,
+            )
+        )
+
+
+@pytest.mark.parametrize(
+    "batch_size",
+    [
+        0,
+        101,
+    ],
+)
+def test_background_batch_size_must_be_within_endpoint_limits(
+    batch_size: int,
+) -> None:
+    """The runner must reject unsupported batch sizes early."""
+
+    with pytest.raises(
+        ValueError,
+        match="background batch size must be between 1 and 100",
+    ):
+        workload_runner.build_configuration(
+            build_arguments(
+                background_batch_size=batch_size,
+            )
+        )
+
+
+def test_metric_summary_uses_nearest_rank_percentiles() -> None:
+    """Metric calculations must remain stable and reproducible."""
+
+    summary = workload_runner.metric_summary(
+        [
+            10.0,
+            20.0,
+            30.0,
+            40.0,
+            50.0,
+        ]
+    )
+
+    assert summary == {
+        "count": 5,
+        "minimum_ms": 10.0,
+        "mean_ms": 30.0,
+        "p50_ms": 30.0,
+        "p95_ms": 50.0,
+        "p99_ms": 50.0,
+        "maximum_ms": 50.0,
+    }
+
+
+def test_metric_summary_returns_explicit_empty_shape() -> None:
+    """Empty measurements must not produce misleading zero latency."""
+
+    summary = workload_runner.metric_summary([])
+
+    assert summary == {
+        "count": 0,
+        "minimum_ms": None,
+        "mean_ms": None,
+        "p50_ms": None,
+        "p95_ms": None,
+        "p99_ms": None,
+        "maximum_ms": None,
+    }
+
+
+def build_success_row(
+    *,
+    workload_type: str,
+    sequence_number: int,
+    client_elapsed_ms: float,
+    database_total_ms: float,
+) -> dict[str, object]:
+    """Build the minimum successful row needed by phase summaries."""
+
+    return {
+        "workload_type": workload_type,
+        "sequence_number": sequence_number,
+        "outcome": "success",
+        "client_elapsed_ms": client_elapsed_ms,
+        "database_total_ms": database_total_ms,
+    }
+
+
+def test_classify_request_phase_distinguishes_first_request() -> None:
+    """The first request must remain separate from steady-state work."""
+
+    assert (
+        workload_runner.classify_request_phase(1)
+        == "first_request"
+    )
+
+    assert (
+        workload_runner.classify_request_phase(2)
+        == "later_requests"
+    )
+
+    assert (
+        workload_runner.classify_request_phase(10)
+        == "later_requests"
+    )
+
+
+def test_classify_request_phase_rejects_invalid_sequence() -> None:
+    """Request sequence numbers must be positive."""
+
+    with pytest.raises(
+        ValueError,
+        match="sequence number must be greater than zero",
+    ):
+        workload_runner.classify_request_phase(0)
+
+
+def test_summarize_request_phases_separates_warmup_effect() -> None:
+    """First-wave and later-request measurements stay independent."""
+
+    rows = [
+        build_success_row(
+            workload_type="foreground",
+            sequence_number=1,
+            client_elapsed_ms=100.0,
+            database_total_ms=25.0,
+        ),
+        build_success_row(
+            workload_type="foreground",
+            sequence_number=2,
+            client_elapsed_ms=30.0,
+            database_total_ms=20.0,
+        ),
+        build_success_row(
+            workload_type="foreground",
+            sequence_number=3,
+            client_elapsed_ms=40.0,
+            database_total_ms=20.0,
+        ),
+        build_success_row(
+            workload_type="background",
+            sequence_number=1,
+            client_elapsed_ms=160.0,
+            database_total_ms=80.0,
+        ),
+        build_success_row(
+            workload_type="background",
+            sequence_number=2,
+            client_elapsed_ms=90.0,
+            database_total_ms=70.0,
+        ),
+    ]
+
+    summary = workload_runner.summarize_request_phases(rows)
+
+    foreground_first = summary["foreground"]["first_request"]
+
+    assert foreground_first["count"] == 1
+    assert foreground_first["average_client_ms"] == 100.0
+    assert foreground_first["average_database_ms"] == 25.0
+    assert (
+        foreground_first["average_outside_database_ms"]
+        == 75.0
+    )
+
+    foreground_later = summary["foreground"]["later_requests"]
+
+    assert foreground_later["count"] == 2
+    assert foreground_later["average_client_ms"] == 35.0
+    assert foreground_later["average_database_ms"] == 20.0
+    assert (
+        foreground_later["average_outside_database_ms"]
+        == 15.0
+    )
+
+    background_first = summary["background"]["first_request"]
+
+    assert background_first["count"] == 1
+    assert background_first["average_client_ms"] == 160.0
+    assert background_first["average_database_ms"] == 80.0
+    assert (
+        background_first["average_outside_database_ms"]
+        == 80.0
+    )
+
+    background_later = summary["background"]["later_requests"]
+
+    assert background_later["count"] == 1
+    assert background_later["average_client_ms"] == 90.0
+    assert background_later["average_database_ms"] == 70.0
+    assert (
+        background_later["average_outside_database_ms"]
+        == 20.0
+    )
+
+
+def build_empty_metric_summary() -> dict[str, float | int | None]:
+    """Build an explicit empty latency summary for report tests."""
+
+    return {
+        "count": 0,
+        "minimum_ms": None,
+        "mean_ms": None,
+        "p50_ms": None,
+        "p95_ms": None,
+        "p99_ms": None,
+        "maximum_ms": None,
+    }
+
+
+def build_empty_workload_summary() -> dict[str, Any]:
+    """Build the workload structure expected by report generation."""
+
+    return {
+        "request_count": 0,
+        "success_count": 0,
+        "failure_count": 0,
+        "success_rate_percent": 0.0,
+        "throughput_requests_per_second": 0.0,
+        "metrics": {
+            "client_elapsed_ms": build_empty_metric_summary(),
+            "database_acquire_ms": build_empty_metric_summary(),
+            "database_query_ms": build_empty_metric_summary(),
+            "database_fetch_ms": build_empty_metric_summary(),
+            "database_release_ms": build_empty_metric_summary(),
+            "database_total_ms": build_empty_metric_summary(),
+        },
+        "pool_observations": {
+            "peak_pool_size": None,
+            "minimum_pool_available": None,
+            "peak_requests_waiting": None,
+            "peak_requests_queued": None,
+        },
+        "database_work": {
+            "selected_count": 0,
+            "updated_count": 0,
+            "audit_count": 0,
+        },
+        "failures": [],
+    }
+
+
+def build_empty_phase_summary() -> dict[str, Any]:
+    """Build an empty first-request or later-request summary."""
+
+    return {
+        "count": 0,
+        "average_client_ms": None,
+        "average_database_ms": None,
+        "average_outside_database_ms": None,
+    }
+
+
+def build_request_phase_report_summary() -> dict[str, Any]:
+    """Build both workload phase structures required by Markdown."""
+
+    return {
+        "foreground": {
+            "first_request": build_empty_phase_summary(),
+            "later_requests": build_empty_phase_summary(),
+        },
+        "background": {
+            "first_request": build_empty_phase_summary(),
+            "later_requests": build_empty_phase_summary(),
+        },
+    }
+
+
+def test_write_run_artifacts_creates_reviewable_evidence(
+    tmp_path: Path,
+) -> None:
+    """One run produces raw, machine-readable, and human reports."""
+
+    run_directory = tmp_path / "example-run"
+    run_directory.mkdir()
+
+    rows = [
+        {
+            field_name: ""
+            for field_name in workload_runner.CSV_FIELD_NAMES
+        }
+    ]
+
+    rows[0].update(
+        {
+            "run_id": "example-run",
+            "workload_type": "foreground",
+            "worker_number": 1,
+            "sequence_number": 1,
+            "request_phase": "first_request",
+            "request_number": 1,
+            "request_id": "example-request",
+            "client_elapsed_ms": 10.0,
+            "outcome": "success",
+            "encounter_ids": [],
+        }
+    )
+
+    report = {
+        "run_id": "example-run",
+        "scenario": "shared_pool_mixed_workload",
+        "api_base_url": "http://localhost:8000",
+        "expected_connection_strategy": "bounded_pool",
+        "configuration": {
+            "foreground": {
+                "request_count": 1,
+                "concurrency": 1,
+                "requests_per_worker": 1,
+                "connection_hold_ms": 0,
+            },
+            "background": {
+                "request_count": 1,
+                "concurrency": 1,
+                "requests_per_worker": 1,
+                "batch_size": 1,
+                "required_encounter_count": 1,
+            },
+            "combined": {
+                "total_concurrency": 2,
+                "connect_timeout_seconds": 3.0,
+                "read_timeout_seconds": 15.0,
+            },
+        },
+        "dataset": {
+            "record_count": 1,
+        },
+        "execution": {
+            "started_at_utc": "2026-07-21T18:00:00+00:00",
+            "finished_at_utc": "2026-07-21T18:00:01+00:00",
+            "fatal_error": "",
+        },
+        "summary": {
+            "elapsed_seconds": 1.0,
+            "total_request_count": 1,
+            "total_success_count": 1,
+            "total_failure_count": 0,
+            "foreground": build_empty_workload_summary(),
+            "background": build_empty_workload_summary(),
+            "request_phases": (
+                build_request_phase_report_summary()
+            ),
+        },
+        "cleanup": {
+            "encounters_deleted": 1,
+            "audit_rows_deleted": 2,
+        },
+        "cleanup_error": "",
+    }
+
+    paths = workload_runner.write_run_artifacts(
+        run_directory=run_directory,
+        rows=rows,
+        report=report,
+    )
+
+    assert paths["request_csv"].is_file()
+    assert paths["json_report"].is_file()
+    assert paths["markdown_report"].is_file()
+
+    with paths["request_csv"].open(
+        encoding="utf-8",
+        newline="",
+    ) as csv_file:
+        csv_rows = list(csv.DictReader(csv_file))
+
+    assert len(csv_rows) == 1
+    assert csv_rows[0]["request_id"] == "example-request"
+    assert csv_rows[0]["request_phase"] == "first_request"
+
+    json_report = json.loads(
+        paths["json_report"].read_text(
+            encoding="utf-8",
+        )
+    )
+
+    assert json_report["run_id"] == "example-run"
+
+    markdown_report = paths["markdown_report"].read_text(
+        encoding="utf-8",
+    )
+
+    assert (
+        "# Foreground vs. Background Workload Run"
+        in markdown_report
+    )
+
+    assert (
+        "## First-request versus later-request behavior"
+        in markdown_report
+    )
+
+    assert "`request-results.csv`" in markdown_report
