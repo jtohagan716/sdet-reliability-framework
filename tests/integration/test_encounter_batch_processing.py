@@ -42,15 +42,22 @@ ROLLBACK_BATCH_ID = "integration-encounter-batch-rollback"
 @pytest.fixture(scope="module", autouse=True)
 def database_resources() -> Iterator[None]:
     """
-    Initialize the application's database resources for this test module.
+    Initialize and verify database resources for this test module.
 
-    Skip cleanly when the local PostgreSQL service is unavailable, matching
-    the repository's existing Docker-backed integration-test behavior.
+    Skip cleanly when PostgreSQL is unavailable. Opening a real connection
+    is required because the connection-per-operation strategy does not open
+    a connection during initialize_database_resources().
     """
 
     try:
         initialize_database_resources()
+
+        with get_connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
     except Exception as error:
+        close_database_resources()
+
         pytest.skip(
             "PostgreSQL database resources are unavailable for this "
             f"integration test: {error}"
