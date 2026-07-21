@@ -11,6 +11,7 @@ def get_patient_summary_from_postgres(
     patient_id: int,
     defect_mode: str = "none",
     timings: DatabasePhaseTimings | None = None,
+    connection_hold_ms: int = 0,
 ) -> dict[str, Any] | None:
     if defect_mode == "include_scheduled_last_visit":
         encounter_status_filter = ""
@@ -39,6 +40,9 @@ def get_patient_summary_from_postgres(
     """
 
     with get_connection(timings=timings) as connection:
+        if connection_hold_ms > 0:
+            time.sleep(connection_hold_ms / 1000)
+
         with connection.cursor() as cursor:
             query_started = time.perf_counter()
             cursor.execute(query, (patient_id,))

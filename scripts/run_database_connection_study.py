@@ -172,6 +172,7 @@ def execute_worker(
     barrier: threading.Barrier,
     connect_timeout_seconds: float,
     read_timeout_seconds: float,
+    connection_hold_ms: int = 0,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
 
@@ -199,6 +200,7 @@ def execute_worker(
             base_row: dict[str, Any] = {
                 "run_id": run_id,
                 "strategy": strategy,
+                "connection_hold_ms": connection_hold_ms,
                 "worker_number": worker_number,
                 "sequence_number": sequence_number,
                 "request_number": request_number,
@@ -207,8 +209,16 @@ def execute_worker(
             }
 
             try:
+                request_endpoint = TIMING_ENDPOINT
+
+                if connection_hold_ms > 0:
+                    request_endpoint = (
+                        f"{TIMING_ENDPOINT}"
+                        f"&connection_hold_ms={connection_hold_ms}"
+                    )
+
                 response = session.get(
-                    TIMING_ENDPOINT,
+                    request_endpoint,
                     headers={"X-Request-ID": request_id},
                     timeout=(
                         connect_timeout_seconds,
@@ -222,6 +232,17 @@ def execute_worker(
 
                 response.raise_for_status()
                 payload = response.json()
+
+                actual_hold_ms = payload.get(
+                    "connection_hold_ms"
+                )
+
+                if actual_hold_ms != connection_hold_ms:
+                    raise RuntimeError(
+                        "Response connection hold mismatch: "
+                        f"expected {connection_hold_ms!r}, "
+                        f"received {actual_hold_ms!r}"
+                    )
 
                 actual_strategy = payload[
                     "connection_strategy"
@@ -394,6 +415,7 @@ def build_summary(
     elapsed_seconds: float,
     starting_state_run_id: str,
     api_log_line_count: int,
+    connection_hold_ms: int = 0,
 ) -> dict[str, Any]:
     successful_rows = [
         row
@@ -463,6 +485,7 @@ def build_summary(
         "strategy": strategy,
         "configuration_label": configuration_label,
         "mode": mode,
+        "connection_hold_ms": connection_hold_ms,
         "starting_state_run_id": starting_state_run_id,
         "request_count": request_count,
         "concurrency": concurrency,
@@ -510,6 +533,10 @@ def write_markdown_report(
             f"`{summary['configuration_label']}`"
         ),
         f"- Mode: `{summary['mode']}`",
+        (
+            "- Connection hold: "
+            f"{summary['connection_hold_ms']} ms"
+        ),
         (
             "- Starting-state run: "
             f"`{summary['starting_state_run_id']}`"
@@ -621,6 +648,16 @@ def main() -> None:
     )
 
     parser.add_argument(
+        "--connection-hold-ms",
+        type=int,
+        default=0,
+        help=(
+            "Milliseconds to hold each checked-out database "
+            "connection before query execution (0-1000)."
+        ),
+    )
+
+    parser.add_argument(
         "--warmup-count",
         type=int,
         default=20,
@@ -654,6 +691,12 @@ def main() -> None:
     if arguments.concurrency <= 0:
         raise ValueError(
             "--concurrency must be greater than zero"
+        )
+
+    if not 0 <= arguments.connection_hold_ms <= 1000:
+        raise ValueError(
+            "--connection-hold-ms must be between "
+            "0 and 1000"
         )
 
     if (
@@ -748,6 +791,9 @@ def main() -> None:
                 read_timeout_seconds=(
                     arguments.read_timeout_seconds
                 ),
+                connection_hold_ms=(
+                    arguments.connection_hold_ms
+                ),
             )
             for worker_number in range(
                 1,
@@ -796,6 +842,7 @@ def main() -> None:
         elapsed_seconds=elapsed_seconds,
         starting_state_run_id=starting_state_run_id,
         api_log_line_count=api_log_line_count,
+        connection_hold_ms=arguments.connection_hold_ms,
     )
 
     summary_path = run_directory / "summary.json"

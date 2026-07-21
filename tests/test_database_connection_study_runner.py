@@ -1,10 +1,82 @@
 import pytest
 
 from scripts.run_database_connection_study import (
+    TIMING_ENDPOINT,
     build_summary,
+    execute_worker,
     metric_summary,
     validate_starting_state,
 )
+
+
+class _ImmediateBarrier:
+    def wait(self):
+        return 0
+
+
+class _FakeResponse:
+    def __init__(self, payload):
+        self._payload = payload
+        self.status_code = 200
+        self.headers = {
+            "X-Request-ID": "response-request-id",
+        }
+
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return self._payload
+
+
+class _FakeSession:
+    def __init__(self, payload):
+        self._payload = payload
+        self.requested_urls = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+    def get(self, url, headers, timeout):
+        self.requested_urls.append(url)
+        return _FakeResponse(self._payload)
+
+
+def _success_payload(
+    *,
+    connection_hold_ms,
+    strategy="bounded_pool",
+):
+    pool = None
+
+    if strategy == "bounded_pool":
+        pool = {
+            "statistics": {
+                "pool_size": 4,
+                "pool_available": 3,
+                "requests_waiting": 0,
+                "requests_queued": 1,
+            }
+        }
+
+    return {
+        "connection_hold_ms": connection_hold_ms,
+        "connection_strategy": strategy,
+        "database_phases": {
+            "acquire_ms": 0.1,
+            "query_ms": 1.0,
+            "fetch_ms": 0.1,
+            "release_ms": 0.2,
+            "total_ms": 101.4,
+        },
+        "database_resources": {
+            "connection_strategy": strategy,
+            "pool": pool,
+        },
+    }
 
 
 def test_metric_summary_reports_expected_values():
@@ -146,6 +218,7 @@ def test_build_summary_reports_direct_strategy_results():
     )
 
     assert summary["configuration_label"] == "direct"
+    assert summary["connection_hold_ms"] == 0
     assert summary["success_count"] == 2
     assert summary["failure_count"] == 0
     assert summary["pool_observations"] is None
@@ -202,11 +275,101 @@ def test_build_summary_reports_pool_observations():
         elapsed_seconds=1.0,
         starting_state_run_id="state-run",
         api_log_line_count=6,
+        connection_hold_ms=100,
     )
 
+    assert summary["connection_hold_ms"] == 100
     assert summary["pool_observations"] == {
         "maximum_pool_size": 8,
         "minimum_available": 0,
         "maximum_requests_waiting": 2,
         "highest_cumulative_requests_queued_since_api_start": 5,
     }
+
+
+def test_execute_worker_uses_default_endpoint_for_zero_hold(
+    monkeypatch,
+):
+    fake_session = _FakeSession(
+        _success_payload(connection_hold_ms=0)
+    )
+
+    monkeypatch.setattr(
+        "scripts.run_database_connection_study.requests.Session",
+        lambda: fake_session,
+    )
+
+    rows = execute_worker(
+        worker_number=1,
+        requests_per_worker=1,
+        strategy="bounded_pool",
+        run_id="zero-hold-run",
+        barrier=_ImmediateBarrier(),
+        connect_timeout_seconds=3.0,
+        read_timeout_seconds=10.0,
+    )
+
+    assert fake_session.requested_urls == [TIMING_ENDPOINT]
+    assert rows[0]["outcome"] == "success"
+    assert rows[0]["connection_hold_ms"] == 0
+
+
+def test_execute_worker_sends_and_records_connection_hold(
+    monkeypatch,
+):
+    fake_session = _FakeSession(
+        _success_payload(connection_hold_ms=100)
+    )
+
+    monkeypatch.setattr(
+        "scripts.run_database_connection_study.requests.Session",
+        lambda: fake_session,
+    )
+
+    rows = execute_worker(
+        worker_number=1,
+        requests_per_worker=1,
+        strategy="bounded_pool",
+        run_id="held-run",
+        barrier=_ImmediateBarrier(),
+        connect_timeout_seconds=3.0,
+        read_timeout_seconds=10.0,
+        connection_hold_ms=100,
+    )
+
+    assert fake_session.requested_urls == [
+        f"{TIMING_ENDPOINT}&connection_hold_ms=100"
+    ]
+    assert rows[0]["outcome"] == "success"
+    assert rows[0]["connection_hold_ms"] == 100
+
+
+def test_execute_worker_detects_hold_response_mismatch(
+    monkeypatch,
+):
+    fake_session = _FakeSession(
+        _success_payload(connection_hold_ms=50)
+    )
+
+    monkeypatch.setattr(
+        "scripts.run_database_connection_study.requests.Session",
+        lambda: fake_session,
+    )
+
+    rows = execute_worker(
+        worker_number=1,
+        requests_per_worker=1,
+        strategy="bounded_pool",
+        run_id="mismatch-run",
+        barrier=_ImmediateBarrier(),
+        connect_timeout_seconds=3.0,
+        read_timeout_seconds=10.0,
+        connection_hold_ms=100,
+    )
+
+    assert rows[0]["outcome"] == "failure"
+    assert rows[0]["error_type"] == "RuntimeError"
+    assert (
+        "Response connection hold mismatch"
+        in rows[0]["error_message"]
+    )
