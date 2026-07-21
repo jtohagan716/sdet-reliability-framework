@@ -118,3 +118,69 @@ def test_background_pool_configuration_uses_background_settings(
         "startup_timeout_seconds": 45.0,
         "max_waiting": 12,
 }
+
+import api_service.database as database
+
+
+class FakeOpenPool:
+    closed = False
+
+
+def test_shared_topology_routes_background_to_foreground_pool(
+    monkeypatch,
+):
+    foreground_pool = FakeOpenPool()
+    background_pool = FakeOpenPool()
+
+    monkeypatch.setenv(
+        "DATABASE_POOL_TOPOLOGY",
+        SHARED_POOL,
+    )
+    monkeypatch.setattr(
+        database,
+        "_foreground_database_pool",
+        foreground_pool,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        database,
+        "_background_database_pool",
+        background_pool,
+        raising=False,
+    )
+
+    selected_pool = database._require_database_pool(
+        BACKGROUND_WORKLOAD,
+    )
+
+    assert selected_pool is foreground_pool
+
+
+def test_isolated_topology_routes_background_to_background_pool(
+    monkeypatch,
+):
+    foreground_pool = FakeOpenPool()
+    background_pool = FakeOpenPool()
+
+    monkeypatch.setenv(
+        "DATABASE_POOL_TOPOLOGY",
+        ISOLATED_POOLS,
+    )
+    monkeypatch.setattr(
+        database,
+        "_foreground_database_pool",
+        foreground_pool,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        database,
+        "_background_database_pool",
+        background_pool,
+        raising=False,
+    )
+
+    selected_pool = database._require_database_pool(
+        BACKGROUND_WORKLOAD,
+    )
+
+    assert selected_pool is background_pool

@@ -42,7 +42,8 @@ SUPPORTED_WORKLOADS = {
     BACKGROUND_WORKLOAD,
 }
 
-_database_pool: ConnectionPool | None = None
+_foreground_database_pool: ConnectionPool | None = None
+_background_database_pool: ConnectionPool | None = None
 _database_pool_lock = threading.Lock()
 
 
@@ -214,120 +215,226 @@ def get_database_pool_configuration(
     }
 
 
+def _pool_is_open(pool: ConnectionPool | None) -> bool:
+    return pool is not None and not pool.closed
+
+
+def _create_database_pool(
+    *,
+    workload: str,
+    name: str,
+    application_name: str,
+) -> ConnectionPool:
+    configuration = get_database_pool_configuration(
+        workload=workload,
+    )
+
+    pool = ConnectionPool(
+        conninfo=get_database_url(),
+        kwargs={
+            "row_factory": dict_row,
+            "application_name": application_name,
+        },
+        min_size=int(configuration["min_size"]),
+        max_size=int(configuration["max_size"]),
+        timeout=float(configuration["timeout_seconds"]),
+        max_waiting=int(configuration["max_waiting"]),
+        name=name,
+        open=False,
+    )
+
+    try:
+        pool.open(
+            wait=True,
+            timeout=float(
+                configuration["startup_timeout_seconds"]
+            ),
+        )
+    except Exception:
+        pool.close()
+        raise
+
+    return pool
+
+
+def _close_pool(pool: ConnectionPool | None) -> None:
+    if pool is not None:
+        pool.close()
+
+
 def initialize_database_resources() -> None:
-    global _database_pool
+    global _foreground_database_pool
+    global _background_database_pool
 
     if get_database_connection_strategy() != BOUNDED_POOL:
         return
 
-    configuration = get_database_pool_configuration()
+    topology = get_database_pool_topology()
 
     with _database_pool_lock:
-        if (
-            _database_pool is not None
-            and not _database_pool.closed
-        ):
-            return
-
-        pool = ConnectionPool(
-            conninfo=get_database_url(),
-            kwargs={
-                "row_factory": dict_row,
-                "application_name": (
-                    "sdet-reliability-api-bounded-pool"
-                ),
-            },
-            min_size=int(configuration["min_size"]),
-            max_size=int(configuration["max_size"]),
-            timeout=float(
-                configuration["timeout_seconds"]
-            ),
-            max_waiting=int(configuration["max_waiting"]),
-            name="interactive-api-pool",
-            open=False,
+        foreground_is_ready = _pool_is_open(
+            _foreground_database_pool
+        )
+        background_is_ready = _pool_is_open(
+            _background_database_pool
         )
 
+        if foreground_is_ready:
+            if topology == SHARED_POOL and not background_is_ready:
+                return
+
+            if topology == ISOLATED_POOLS and background_is_ready:
+                return
+
+        _close_pool(_background_database_pool)
+        _close_pool(_foreground_database_pool)
+        _background_database_pool = None
+        _foreground_database_pool = None
+
         try:
-            pool.open(
-                wait=True,
-                timeout=float(
-                    configuration[
-                        "startup_timeout_seconds"
-                    ]
+            _foreground_database_pool = _create_database_pool(
+                workload=FOREGROUND_WORKLOAD,
+                name="interactive-api-pool",
+                application_name=(
+                    "sdet-reliability-api-foreground-pool"
                 ),
             )
-        except Exception:
-            pool.close()
-            raise
 
-        _database_pool = pool
+            if topology == ISOLATED_POOLS:
+                _background_database_pool = (
+                    _create_database_pool(
+                        workload=BACKGROUND_WORKLOAD,
+                        name="background-worker-pool",
+                        application_name=(
+                            "sdet-reliability-api-background-pool"
+                        ),
+                    )
+                )
+        except Exception:
+            _close_pool(_background_database_pool)
+            _close_pool(_foreground_database_pool)
+            _background_database_pool = None
+            _foreground_database_pool = None
+            raise
 
 
 def close_database_resources() -> None:
-    global _database_pool
+    global _foreground_database_pool
+    global _background_database_pool
 
     with _database_pool_lock:
-        if _database_pool is None:
-            return
+        _close_pool(_background_database_pool)
+        _close_pool(_foreground_database_pool)
 
-        _database_pool.close()
-        _database_pool = None
+        _background_database_pool = None
+        _foreground_database_pool = None
 
 
-def _require_database_pool() -> ConnectionPool:
-    if _database_pool is None or _database_pool.closed:
+def _require_database_pool(
+    workload: str = FOREGROUND_WORKLOAD,
+) -> ConnectionPool:
+    resolved_workload = _validate_workload(workload)
+    topology = get_database_pool_topology()
+
+    if (
+        topology == ISOLATED_POOLS
+        and resolved_workload == BACKGROUND_WORKLOAD
+    ):
+        selected_pool = _background_database_pool
+        selected_pool_name = "background"
+    else:
+        selected_pool = _foreground_database_pool
+        selected_pool_name = "foreground"
+
+    if selected_pool is None or selected_pool.closed:
         raise RuntimeError(
-            "The bounded database pool is not initialized"
+            f"The {selected_pool_name} bounded database pool "
+            "is not initialized"
         )
 
-    return _database_pool
+    return selected_pool
 
 
-def get_database_resource_status() -> dict[str, Any]:
+def _pool_status(
+    pool: ConnectionPool,
+    *,
+    workload: str,
+) -> dict[str, Any]:
+    return {
+        "name": pool.name,
+        "open": not pool.closed,
+        "configuration": get_database_pool_configuration(
+            workload=workload,
+        ),
+        "statistics": pool.get_stats(),
+    }
+
+
+def get_database_resource_status(
+    workload: str = FOREGROUND_WORKLOAD,
+) -> dict[str, Any]:
     strategy = get_database_connection_strategy()
+    topology = get_database_pool_topology()
+    resolved_workload = _validate_workload(workload)
 
     if strategy == CONNECTION_PER_OPERATION:
         return {
             "connection_strategy": strategy,
+            "pool_topology": topology,
+            "workload": resolved_workload,
             "pool": None,
         }
 
-    pool = _require_database_pool()
+    pool = _require_database_pool(resolved_workload)
+
+    pool_workload = (
+        BACKGROUND_WORKLOAD
+        if (
+            topology == ISOLATED_POOLS
+            and resolved_workload == BACKGROUND_WORKLOAD
+        )
+        else FOREGROUND_WORKLOAD
+    )
 
     return {
         "connection_strategy": strategy,
-        "pool": {
-            "name": pool.name,
-            "open": not pool.closed,
-            "configuration": (
-                get_database_pool_configuration()
-            ),
-            "statistics": pool.get_stats(),
-        },
+        "pool_topology": topology,
+        "workload": resolved_workload,
+        "pool": _pool_status(
+            pool,
+            workload=pool_workload,
+        ),
     }
 
 
 @contextmanager
 def get_connection(
     timings: DatabasePhaseTimings | None = None,
+    *,
+    workload: str = FOREGROUND_WORKLOAD,
 ) -> Iterator[psycopg.Connection]:
     total_started = time.perf_counter()
     acquire_started = time.perf_counter()
     release_started: float | None = None
 
     strategy = get_database_connection_strategy()
+    resolved_workload = _validate_workload(workload)
 
     if strategy == BOUNDED_POOL:
-        connection_context = (
-            _require_database_pool().connection()
-        )
+        connection_context = _require_database_pool(
+            resolved_workload,
+        ).connection()
     else:
+        application_name = (
+            "sdet-reliability-api-background-direct"
+            if resolved_workload == BACKGROUND_WORKLOAD
+            else "sdet-reliability-api-foreground-direct"
+        )
+
         connection_context = psycopg.connect(
             get_database_url(),
             row_factory=dict_row,
-            application_name=(
-                "sdet-reliability-api-direct"
-            ),
+            application_name=application_name,
         )
 
     try:
