@@ -1477,33 +1477,33 @@ def workload_markdown_section(
         "",
         (
             "- Peak reported pool size: "
-            f"{format_markdown_value(
-                summary['pool_observations']['peak_pool_size']
-            )}"
+            + format_markdown_value(
+                summary["pool_observations"]["peak_pool_size"]
+            )
         ),
         (
             "- Minimum reported available connections: "
-            f"{format_markdown_value(
-                summary['pool_observations'][
-                    'minimum_pool_available'
+            + format_markdown_value(
+                summary["pool_observations"][
+                    "minimum_pool_available"
                 ]
-            )}"
+            )
         ),
         (
             "- Peak reported requests waiting: "
-            f"{format_markdown_value(
-                summary['pool_observations'][
-                    'peak_requests_waiting'
+            + format_markdown_value(
+                summary["pool_observations"][
+                    "peak_requests_waiting"
                 ]
-            )}"
+            )
         ),
         (
             "- Peak reported requests queued: "
-            f"{format_markdown_value(
-                summary['pool_observations'][
-                    'peak_requests_queued'
+            + format_markdown_value(
+                summary["pool_observations"][
+                    "peak_requests_queued"
                 ]
-            )}"
+            )
         ),
     ]
 
@@ -1543,7 +1543,7 @@ def workload_markdown_section(
             lines.append(
                 "- "
                 f"`{failure['request_id']}`: "
-                f"{failure['error_type']} — "
+                f"{failure['error_type']} â€” "
                 f"{failure['error_message']}"
             )
 
