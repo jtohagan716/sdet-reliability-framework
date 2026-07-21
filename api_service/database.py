@@ -26,6 +26,22 @@ SUPPORTED_CONNECTION_STRATEGIES = {
     BOUNDED_POOL,
 }
 
+SHARED_POOL = "shared_pool"
+ISOLATED_POOLS = "isolated_pools"
+
+SUPPORTED_POOL_TOPOLOGIES = {
+    SHARED_POOL,
+    ISOLATED_POOLS,
+}
+
+FOREGROUND_WORKLOAD = "foreground"
+BACKGROUND_WORKLOAD = "background"
+
+SUPPORTED_WORKLOADS = {
+    FOREGROUND_WORKLOAD,
+    BACKGROUND_WORKLOAD,
+}
+
 _database_pool: ConnectionPool | None = None
 _database_pool_lock = threading.Lock()
 
@@ -99,40 +115,100 @@ def get_database_connection_strategy() -> str:
     return strategy
 
 
-def get_database_pool_configuration() -> dict[str, int | float]:
+def get_database_pool_topology() -> str:
+    topology = os.getenv(
+        "DATABASE_POOL_TOPOLOGY",
+        SHARED_POOL,
+    ).strip().lower()
+
+    if topology not in SUPPORTED_POOL_TOPOLOGIES:
+        supported = ", ".join(
+            sorted(SUPPORTED_POOL_TOPOLOGIES)
+        )
+
+        raise ValueError(
+            "Unsupported DATABASE_POOL_TOPOLOGY "
+            f"{topology!r}. Supported values: {supported}"
+        )
+
+    return topology
+
+
+def _validate_workload(workload: str) -> str:
+    resolved_workload = workload.strip().lower()
+
+    if resolved_workload not in SUPPORTED_WORKLOADS:
+        supported = ", ".join(sorted(SUPPORTED_WORKLOADS))
+
+        raise ValueError(
+            "Unsupported database workload "
+            f"{resolved_workload!r}. Supported values: {supported}"
+        )
+
+    return resolved_workload
+
+
+def get_database_pool_configuration(
+    workload: str = FOREGROUND_WORKLOAD,
+) -> dict[str, int | float]:
+    resolved_workload = _validate_workload(workload)
+
+    if resolved_workload == BACKGROUND_WORKLOAD:
+        setting_prefix = "DB_BACKGROUND_POOL"
+        default_minimum_size = 1
+        default_maximum_size = 2
+        default_timeout_seconds = 5.0
+        default_startup_timeout_seconds = 30.0
+        default_max_waiting = 10
+    else:
+        setting_prefix = "DB_POOL"
+        default_minimum_size = 4
+        default_maximum_size = 8
+        default_timeout_seconds = 5.0
+        default_startup_timeout_seconds = 30.0
+        default_max_waiting = 40
+
+    minimum_name = f"{setting_prefix}_MIN_SIZE"
+    maximum_name = f"{setting_prefix}_MAX_SIZE"
+    timeout_name = f"{setting_prefix}_TIMEOUT_SECONDS"
+    startup_timeout_name = (
+        f"{setting_prefix}_STARTUP_TIMEOUT_SECONDS"
+    )
+    max_waiting_name = f"{setting_prefix}_MAX_WAITING"
+
     minimum_size = _get_int_setting(
-        "DB_POOL_MIN_SIZE",
-        4,
+        minimum_name,
+        default_minimum_size,
         minimum=1,
     )
 
     maximum_size = _get_int_setting(
-        "DB_POOL_MAX_SIZE",
-        8,
+        maximum_name,
+        default_maximum_size,
         minimum=1,
     )
 
     if minimum_size > maximum_size:
         raise ValueError(
-            "DB_POOL_MIN_SIZE cannot exceed DB_POOL_MAX_SIZE"
+            f"{minimum_name} cannot exceed {maximum_name}"
         )
 
     return {
         "min_size": minimum_size,
         "max_size": maximum_size,
         "timeout_seconds": _get_float_setting(
-            "DB_POOL_TIMEOUT_SECONDS",
-            5.0,
+            timeout_name,
+            default_timeout_seconds,
             minimum=0.1,
         ),
         "startup_timeout_seconds": _get_float_setting(
-            "DB_POOL_STARTUP_TIMEOUT_SECONDS",
-            30.0,
+            startup_timeout_name,
+            default_startup_timeout_seconds,
             minimum=0.1,
         ),
         "max_waiting": _get_int_setting(
-            "DB_POOL_MAX_WAITING",
-            40,
+            max_waiting_name,
+            default_max_waiting,
             minimum=0,
         ),
     }
