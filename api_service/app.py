@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from framework.security.jwt_decoder import decode_jwt
 from framework.security.jwt_inspector import inspect_jwt
 from api_service.database import (
+    BACKGROUND_WORKLOAD,
     close_database_resources,
     get_connection,
     get_database_resource_status,
@@ -713,7 +714,9 @@ def background_encounter_batch(
             detail="BACKGROUND_DATABASE_WORKLOAD_UNAVAILABLE",
         ) from error
 
-    resource_status = get_database_resource_status()
+    resource_status = get_database_resource_status(
+    workload=BACKGROUND_WORKLOAD,
+)
 
     logger.info(
         "background_encounter_batch_completed "
