@@ -3,7 +3,10 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from api_service.database import get_connection
+from api_service.database import (
+    BACKGROUND_WORKLOAD,
+    get_connection,
+)
 from api_service.database_timings import DatabasePhaseTimings
 from api_service.observability.audit_context import (
     get_current_trace_ids,
@@ -66,7 +69,10 @@ def process_scheduled_encounter_batch(
 
     trace_id, span_id = get_current_trace_ids()
 
-    with get_connection(timings=resolved_timings) as connection:
+    with get_connection(
+        timings=resolved_timings,
+        workload=BACKGROUND_WORKLOAD,
+        ) as connection:
         try:
             query_started = time.perf_counter()
 
