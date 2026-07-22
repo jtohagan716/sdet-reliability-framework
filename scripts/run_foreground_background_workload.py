@@ -119,6 +119,7 @@ class WorkloadConfiguration:
 class MixedWorkloadConfiguration:
     """Describe one foreground-versus-background experiment."""
 
+    expected_pool_topology: str
     foreground: WorkloadConfiguration
     background: WorkloadConfiguration
     foreground_connection_hold_ms: int
@@ -386,9 +387,27 @@ def extract_database_timings(
     return normalized
 
 
+def validate_pool_topology(
+    *,
+    expected_pool_topology: str,
+    observed_pool_topology: str,
+) -> None:
+    """Reject evidence collected from an unexpected pool topology."""
+
+    if observed_pool_topology != expected_pool_topology:
+        raise RuntimeError(
+            "Expected database pool topology "
+            f"'{expected_pool_topology}', "
+            "but the API reported "
+            f"'{observed_pool_topology}'"
+        )
+
+
 def extract_pool_statistics(
     payload: dict[str, Any],
-) -> dict[str, int]:
+    *,
+    expected_pool_topology: str | None = None,
+) -> dict[str, int | None]:
     """Validate and return the bounded-pool statistics."""
 
     resources = payload.get("database_resources")
@@ -396,6 +415,14 @@ def extract_pool_statistics(
     if not isinstance(resources, dict):
         raise RuntimeError(
             "Response contains no database_resources object"
+        )
+
+    if expected_pool_topology is not None:
+        validate_pool_topology(
+            expected_pool_topology=expected_pool_topology,
+            observed_pool_topology=str(
+                resources.get("pool_topology", "")
+            ),
         )
 
     pool = resources.get("pool")
@@ -420,8 +447,10 @@ def extract_pool_statistics(
         "requests_waiting": int(
             statistics.get("requests_waiting", 0)
         ),
-        "requests_queued": int(
-            statistics.get("requests_queued", 0)
+        "requests_queued": (
+            int(statistics["requests_queued"])
+            if statistics.get("requests_queued") is not None
+            else None
         ),
     }
 
@@ -613,7 +642,12 @@ def execute_foreground_worker(
                     field_name="database_phases",
                 )
 
-                pool = extract_pool_statistics(payload)
+                pool = extract_pool_statistics(
+                    payload,
+                    expected_pool_topology=(
+                        configuration.expected_pool_topology
+                    ),
+                )
 
                 rows.append(
                     {
@@ -815,7 +849,12 @@ def execute_background_worker(
                     field_name="database_timings",
                 )
 
-                pool = extract_pool_statistics(payload)
+                pool = extract_pool_statistics(
+                    payload,
+                    expected_pool_topology=(
+                        configuration.expected_pool_topology
+                    ),
+                )
 
                 rows.append(
                     {
@@ -1543,7 +1582,7 @@ def workload_markdown_section(
             lines.append(
                 "- "
                 f"`{failure['request_id']}`: "
-                f"{failure['error_type']} â€” "
+                f"{failure['error_type']} — "
                 f"{failure['error_message']}"
             )
 
@@ -1797,8 +1836,18 @@ def parse_arguments() -> argparse.Namespace:
         type=float,
         default=15.0,
     )
+    parser.add_argument(
+        "--expected-pool-topology",
+        choices=("shared_pool", "isolated_pools"),
+        default="shared_pool",
+        help=(
+            "Database pool topology the API must report during the run. "
+            "Defaults to shared_pool."
+        ),
+    )
 
     return parser.parse_args()
+
 
 
 def build_configuration(
@@ -1807,6 +1856,7 @@ def build_configuration(
     """Build and validate an immutable study configuration."""
 
     configuration = MixedWorkloadConfiguration(
+        expected_pool_topology=arguments.expected_pool_topology,
         foreground=WorkloadConfiguration(
             request_count=arguments.foreground_request_count,
             concurrency=arguments.foreground_concurrency,

@@ -17,6 +17,7 @@ def build_arguments(
     """Build valid command-line arguments with optional overrides."""
 
     values: dict[str, Any] = {
+        "expected_pool_topology": "shared_pool",
         "foreground_request_count": 20,
         "foreground_concurrency": 4,
         "foreground_connection_hold_ms": 0,
@@ -32,12 +33,113 @@ def build_arguments(
     return argparse.Namespace(**values)
 
 
+
+def test_parse_arguments_defaults_to_shared_pool(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The original shared-pool scenario remains the CLI default."""
+
+    monkeypatch.setattr(
+        "sys.argv",
+        ["run_foreground_background_workload.py"],
+    )
+
+    arguments = workload_runner.parse_arguments()
+
+    assert arguments.expected_pool_topology == "shared_pool"
+
+
+def test_extract_pool_statistics_rejects_unexpected_topology() -> None:
+    """Pool evidence must come from the requested runtime topology."""
+
+    payload = {
+        "database_resources": {
+            "connection_strategy": "bounded_pool",
+            "pool_topology": "isolated_pools",
+            "workload": "foreground",
+            "pool": {
+                "name": "interactive-api-pool",
+                "configuration": {
+                    "min_size": 4,
+                    "max_size": 8,
+                },
+                "statistics": {
+                    "pool_size": 4,
+                    "pool_available": 3,
+                    "requests_waiting": 1,
+                },
+            },
+        },
+    }
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "Expected database pool topology 'shared_pool', "
+            "but the API reported 'isolated_pools'"
+        ),
+    ):
+        workload_runner.extract_pool_statistics(
+            payload,
+            expected_pool_topology="shared_pool",
+        )
+
+
+def test_extract_pool_statistics_preserves_missing_requests_queued() -> None:
+    """An unavailable queue metric must not be reported as measured zero."""
+
+    payload = {
+        "database_resources": {
+            "connection_strategy": "bounded_pool",
+            "pool_topology": "shared_pool",
+            "workload": "foreground",
+            "pool": {
+                "name": "interactive-api-pool",
+                "configuration": {
+                    "min_size": 4,
+                    "max_size": 8,
+                },
+                "statistics": {
+                    "pool_size": 4,
+                    "pool_available": 3,
+                    "requests_waiting": 1,
+                },
+            },
+        },
+    }
+
+    statistics = workload_runner.extract_pool_statistics(
+        payload,
+        expected_pool_topology="shared_pool",
+    )
+
+    assert statistics["requests_queued"] is None
+
+
+def test_validate_pool_topology_rejects_runtime_mismatch() -> None:
+    """Requested and observed pool topologies must agree."""
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "Expected database pool topology 'shared_pool', "
+            "but the API reported 'isolated_pools'"
+        ),
+    ):
+        workload_runner.validate_pool_topology(
+            expected_pool_topology="shared_pool",
+            observed_pool_topology="isolated_pools",
+        )
+
+
 def test_build_configuration_uses_deterministic_worker_distribution() -> None:
     """Each worker must receive an exact, repeatable request count."""
 
     configuration = workload_runner.build_configuration(
         build_arguments()
     )
+
+    assert configuration.expected_pool_topology == "shared_pool"
 
     assert configuration.foreground.request_count == 20
     assert configuration.foreground.concurrency == 4
