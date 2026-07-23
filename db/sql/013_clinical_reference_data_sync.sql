@@ -291,6 +291,24 @@ CREATE TABLE IF NOT EXISTS sync_control.sync_table_result (
         )
 );
 
+CREATE TABLE IF NOT EXISTS sync_control.sync_checkpoint (
+    reference_domain TEXT PRIMARY KEY,
+
+    last_source_updated_at TIMESTAMPTZ NOT NULL,
+
+    last_source_key TEXT NOT NULL,
+
+    last_successful_sync_run_id UUID NOT NULL
+        REFERENCES sync_control.sync_run(sync_run_id),
+
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_sync_checkpoint_domain_not_blank
+        CHECK (BTRIM(reference_domain) <> ''),
+
+    CONSTRAINT chk_sync_checkpoint_source_key_not_blank
+        CHECK (BTRIM(last_source_key) <> '')
+);
 
 CREATE INDEX IF NOT EXISTS idx_sync_table_result_sync_run_id
 ON sync_control.sync_table_result (
