@@ -6,11 +6,18 @@ BEGIN;
 
 /*
  * These changes occur inside a transaction and are rolled back at the end.
- * Clearing the source and cache gives the test a known starting state.
+ * Clearing the controlled records gives the test a known starting state.
  */
 DELETE FROM facility_cache.appointment_type_reference;
 
 DELETE FROM central_repository.appointment_type_reference;
+
+/*
+ * The checkpoint must be removed before its referenced synchronization run.
+ * The transaction rollback restores any checkpoint that existed previously.
+ */
+DELETE FROM sync_control.sync_checkpoint
+WHERE reference_domain = 'appointment_type';
 
 DELETE FROM sync_control.sync_table_result
 WHERE sync_run_id IN (
@@ -171,6 +178,7 @@ DECLARE
     v_source_minus_cache_count BIGINT;
     v_cache_minus_source_count BIGINT;
     v_distinct_synced_at_count BIGINT;
+    v_checkpoint_count BIGINT;
     v_completed_run_count BIGINT;
     v_completed_table_result_count BIGINT;
 BEGIN
@@ -228,6 +236,7 @@ BEGIN
             v_new_run_cache_count,
             v_other_run_cache_count;
     END IF;
+
 
     SELECT COUNT(DISTINCT synced_at)
     INTO v_distinct_synced_at_count
@@ -312,6 +321,30 @@ BEGIN
 
     RAISE NOTICE
         'bidirectional_data_reconciliation_assertion: passed';
+
+
+    /*
+     * The final deterministic source position is the latest timestamp
+     * followed by the highest source key when timestamps are equal.
+     */
+    SELECT COUNT(*)
+    INTO v_checkpoint_count
+    FROM sync_control.sync_checkpoint
+    WHERE reference_domain = 'appointment_type'
+      AND last_source_updated_at =
+          TIMESTAMPTZ '2026-07-23 00:05:00+00'
+      AND last_source_key = 'LEGACY'
+      AND last_successful_sync_run_id =
+          'dddddddd-dddd-dddd-dddd-dddddddddddd'
+      AND updated_at IS NOT NULL;
+
+    IF v_checkpoint_count <> 1 THEN
+        RAISE EXCEPTION
+            'Full refresh checkpoint evidence is incorrect';
+    END IF;
+
+    RAISE NOTICE
+        'full_refresh_checkpoint_assertion: passed';
 
 
     SELECT COUNT(*)
@@ -406,6 +439,18 @@ SELECT
 FROM sync_control.sync_table_result
 WHERE sync_run_id =
     'dddddddd-dddd-dddd-dddd-dddddddddddd';
+
+
+\echo 'Observed synchronization checkpoint:'
+
+SELECT
+    reference_domain,
+    last_source_updated_at,
+    last_source_key,
+    last_successful_sync_run_id,
+    updated_at
+FROM sync_control.sync_checkpoint
+WHERE reference_domain = 'appointment_type';
 
 
 ROLLBACK;

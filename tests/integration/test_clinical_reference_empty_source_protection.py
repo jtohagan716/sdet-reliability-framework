@@ -2,7 +2,8 @@
 Docker-backed validation for empty-source cache protection.
 
 This test proves that an unexpectedly empty central source does not erase
-an existing facility cache and that the failed run is recorded accurately.
+an existing facility cache, does not advance the successful checkpoint,
+and records the failed synchronization accurately.
 """
 
 import subprocess
@@ -147,6 +148,7 @@ def test_empty_source_preserves_cache_and_records_failure():
     expected_assertions = [
         "empty_source_precondition_assertion: passed",
         "existing_cache_preservation_assertion: passed",
+        "existing_checkpoint_preservation_assertion: passed",
         "empty_source_run_failure_assertion: passed",
         "empty_source_table_failure_assertion: passed",
     ]
@@ -156,6 +158,7 @@ def test_empty_source_preserves_cache_and_records_failure():
 
     assert "ROUTINE" in combined_output
     assert "Routine Visit" in combined_output
+    assert "appointment_type" in combined_output
     assert "failed" in combined_output
 
     assert (
@@ -202,7 +205,15 @@ def test_empty_source_preserves_cache_and_records_failure():
                     'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
                     'ffffffff-ffff-ffff-ffff-ffffffffffff'
                 )
-            ) AS remaining_cache_records;
+            ) AS remaining_cache_records,
+            (
+                SELECT COUNT(*)
+                FROM sync_control.sync_checkpoint
+                WHERE last_successful_sync_run_id IN (
+                    'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+                    'ffffffff-ffff-ffff-ffff-ffffffffffff'
+                )
+            ) AS remaining_checkpoints;
         """
     )
 
@@ -219,6 +230,6 @@ def test_empty_source_preserves_cache_and_records_failure():
     ]
 
     assert any(
-        line.replace(" ", "") == "0|0|0"
+        line.replace(" ", "") == "0|0|0|0"
         for line in data_lines
     ), rollback_check.stdout

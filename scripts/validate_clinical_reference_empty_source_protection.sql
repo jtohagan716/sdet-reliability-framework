@@ -8,6 +8,13 @@ DELETE FROM facility_cache.appointment_type_reference;
 
 DELETE FROM central_repository.appointment_type_reference;
 
+/*
+ * Remove the checkpoint before deleting its referenced synchronization run.
+ * The final rollback restores any state that existed before this test.
+ */
+DELETE FROM sync_control.sync_checkpoint
+WHERE reference_domain = 'appointment_type';
+
 DELETE FROM sync_control.sync_table_result
 WHERE sync_run_id IN (
     'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
@@ -50,6 +57,24 @@ VALUES (
     1,
     1,
     'passed'
+);
+
+
+\echo 'Creating the previous successful checkpoint...'
+
+INSERT INTO sync_control.sync_checkpoint (
+    reference_domain,
+    last_source_updated_at,
+    last_source_key,
+    last_successful_sync_run_id,
+    updated_at
+)
+VALUES (
+    'appointment_type',
+    TIMESTAMPTZ '2026-07-22 00:01:00+00',
+    'ROUTINE',
+    'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+    TIMESTAMPTZ '2026-07-22 00:15:00+00'
 );
 
 
@@ -97,6 +122,7 @@ DECLARE
     v_source_count BIGINT;
     v_cache_count BIGINT;
     v_preserved_cache_count BIGINT;
+    v_preserved_checkpoint_count BIGINT;
     v_failed_run_count BIGINT;
     v_failed_table_result_count BIGINT;
 BEGIN
@@ -150,6 +176,31 @@ BEGIN
 
     RAISE NOTICE
         'existing_cache_preservation_assertion: passed';
+
+
+    /*
+     * A failed full refresh must not advance or replace the last known
+     * successful checkpoint.
+     */
+    SELECT COUNT(*)
+    INTO v_preserved_checkpoint_count
+    FROM sync_control.sync_checkpoint
+    WHERE reference_domain = 'appointment_type'
+      AND last_source_updated_at =
+          TIMESTAMPTZ '2026-07-22 00:01:00+00'
+      AND last_source_key = 'ROUTINE'
+      AND last_successful_sync_run_id =
+          'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+      AND updated_at =
+          TIMESTAMPTZ '2026-07-22 00:15:00+00';
+
+    IF v_preserved_checkpoint_count <> 1 THEN
+        RAISE EXCEPTION
+            'The previous successful checkpoint was modified';
+    END IF;
+
+    RAISE NOTICE
+        'existing_checkpoint_preservation_assertion: passed';
 
 
     SELECT COUNT(*)
@@ -217,6 +268,18 @@ SELECT
     sync_run_id,
     synced_at
 FROM facility_cache.appointment_type_reference;
+
+
+\echo 'Observed preserved synchronization checkpoint:'
+
+SELECT
+    reference_domain,
+    last_source_updated_at,
+    last_source_key,
+    last_successful_sync_run_id,
+    updated_at
+FROM sync_control.sync_checkpoint
+WHERE reference_domain = 'appointment_type';
 
 
 \echo 'Observed failed synchronization run:'

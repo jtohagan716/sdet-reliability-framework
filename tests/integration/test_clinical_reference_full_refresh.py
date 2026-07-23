@@ -2,7 +2,8 @@
 Docker-backed validation for the clinical reference full refresh.
 
 This test proves deterministic source-to-cache replacement, bidirectional
-data reconciliation, synchronization evidence, and rollback isolation.
+data reconciliation, checkpoint advancement, synchronization evidence,
+and rollback isolation.
 """
 
 import subprocess
@@ -149,6 +150,7 @@ def test_full_refresh_replaces_cache_reconciles_and_rolls_back():
         "stale_cache_replacement_assertion: passed",
         "cache_sync_metadata_assertion: passed",
         "bidirectional_data_reconciliation_assertion: passed",
+        "full_refresh_checkpoint_assertion: passed",
         "sync_run_success_outcome_assertion: passed",
         "sync_table_result_success_outcome_assertion: passed",
     ]
@@ -171,6 +173,13 @@ def test_full_refresh_replaces_cache_reconciles_and_rolls_back():
     assert "completed" in combined_output
     assert "full_refresh" in combined_output
     assert "passed" in combined_output
+    assert "appointment_type" in combined_output
+
+    assert (
+        "dddddddd-dddd-dddd-dddd-dddddddddddd"
+        in combined_output
+    )
+
     assert "ROLLBACK" in combined_output
 
     rollback_check = run_psql(
@@ -193,7 +202,13 @@ def test_full_refresh_replaces_cache_reconciles_and_rolls_back():
                 FROM facility_cache.appointment_type_reference
                 WHERE sync_run_id =
                     'dddddddd-dddd-dddd-dddd-dddddddddddd'
-            ) AS remaining_cache_records;
+            ) AS remaining_cache_records,
+            (
+                SELECT COUNT(*)
+                FROM sync_control.sync_checkpoint
+                WHERE last_successful_sync_run_id =
+                    'dddddddd-dddd-dddd-dddd-dddddddddddd'
+            ) AS remaining_checkpoints;
         """
     )
 
@@ -210,6 +225,6 @@ def test_full_refresh_replaces_cache_reconciles_and_rolls_back():
     ]
 
     assert any(
-        line.replace(" ", "") == "0|0|0"
+        line.replace(" ", "") == "0|0|0|0"
         for line in data_lines
     ), rollback_check.stdout
