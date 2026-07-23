@@ -194,3 +194,105 @@ BEGIN
     END IF;
 END;
 $migration$;
+
+CREATE TABLE IF NOT EXISTS sync_control.sync_table_result (
+    sync_table_result_id BIGSERIAL PRIMARY KEY,
+
+    sync_run_id UUID NOT NULL
+        REFERENCES sync_control.sync_run(sync_run_id),
+
+    source_table_name TEXT NOT NULL,
+
+    target_table_name TEXT NOT NULL,
+
+    table_status TEXT NOT NULL,
+
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    completed_at TIMESTAMPTZ,
+
+    source_row_count BIGINT,
+
+    inserted_row_count BIGINT NOT NULL DEFAULT 0,
+
+    updated_row_count BIGINT NOT NULL DEFAULT 0,
+
+    deactivated_row_count BIGINT NOT NULL DEFAULT 0,
+
+    rejected_row_count BIGINT NOT NULL DEFAULT 0,
+
+    target_row_count BIGINT,
+
+    reconciliation_status TEXT NOT NULL DEFAULT 'not_run',
+
+    error_message TEXT,
+
+    CONSTRAINT uq_sync_table_result_run_source_target
+        UNIQUE (
+            sync_run_id,
+            source_table_name,
+            target_table_name
+        ),
+
+    CONSTRAINT chk_sync_table_result_source_not_blank
+        CHECK (BTRIM(source_table_name) <> ''),
+
+    CONSTRAINT chk_sync_table_result_target_not_blank
+        CHECK (BTRIM(target_table_name) <> ''),
+
+    CONSTRAINT chk_sync_table_result_status
+        CHECK (
+            table_status IN (
+                'started',
+                'loading',
+                'reconciling',
+                'completed',
+                'failed'
+            )
+        ),
+
+    CONSTRAINT chk_sync_table_result_reconciliation_status
+        CHECK (
+            reconciliation_status IN (
+                'not_run',
+                'passed',
+                'failed'
+            )
+        ),
+
+    CONSTRAINT chk_sync_table_result_completion_time
+        CHECK (
+            completed_at IS NULL
+            OR completed_at >= started_at
+        ),
+
+    CONSTRAINT chk_sync_table_result_source_row_count
+        CHECK (
+            source_row_count IS NULL
+            OR source_row_count >= 0
+        ),
+
+    CONSTRAINT chk_sync_table_result_inserted_row_count
+        CHECK (inserted_row_count >= 0),
+
+    CONSTRAINT chk_sync_table_result_updated_row_count
+        CHECK (updated_row_count >= 0),
+
+    CONSTRAINT chk_sync_table_result_deactivated_row_count
+        CHECK (deactivated_row_count >= 0),
+
+    CONSTRAINT chk_sync_table_result_rejected_row_count
+        CHECK (rejected_row_count >= 0),
+
+    CONSTRAINT chk_sync_table_result_target_row_count
+        CHECK (
+            target_row_count IS NULL
+            OR target_row_count >= 0
+        )
+);
+
+
+CREATE INDEX IF NOT EXISTS idx_sync_table_result_sync_run_id
+ON sync_control.sync_table_result (
+    sync_run_id
+);
