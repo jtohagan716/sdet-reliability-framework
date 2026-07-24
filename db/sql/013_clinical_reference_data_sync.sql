@@ -327,6 +327,7 @@ DECLARE
     v_started_at TIMESTAMPTZ := clock_timestamp();
     v_completed_at TIMESTAMPTZ;
     v_cache_synced_at TIMESTAMPTZ;
+    v_lock_acquired BOOLEAN := FALSE;
 
     v_source_row_count BIGINT;
     v_inserted_row_count BIGINT;
@@ -368,6 +369,62 @@ BEGIN
         'loading',
         v_started_at
     );
+
+
+    /*
+     * Serialize synchronization for the appointment_type reference domain.
+     *
+     * Full-refresh and incremental modes share this transaction-scoped
+     * advisory lock. Only one run may modify this cache and checkpoint
+     * domain at a time.
+     */
+    SELECT pg_try_advisory_xact_lock(
+        hashtext('sync_control.clinical_reference'),
+        hashtext('appointment_type')
+    )
+    INTO v_lock_acquired;
+
+    IF NOT v_lock_acquired THEN
+        SELECT COUNT(*)
+        INTO v_target_row_count
+        FROM facility_cache.appointment_type_reference;
+
+        v_completed_at := clock_timestamp();
+
+        UPDATE sync_control.sync_table_result
+        SET
+            table_status = 'failed',
+            completed_at = v_completed_at,
+            source_row_count = 0,
+            inserted_row_count = 0,
+            updated_row_count = 0,
+            target_row_count = v_target_row_count,
+            reconciliation_status = 'failed',
+            error_message =
+                'Synchronization lock is already held for '
+                'the appointment_type reference domain.'
+        WHERE sync_run_id = p_sync_run_id
+          AND source_table_name =
+              'central_repository.appointment_type_reference'
+          AND target_table_name =
+              'facility_cache.appointment_type_reference';
+
+        UPDATE sync_control.sync_run
+        SET
+            run_status = 'failed',
+            completed_at = v_completed_at,
+            source_row_count = 0,
+            inserted_row_count = 0,
+            updated_row_count = 0,
+            target_row_count = v_target_row_count,
+            reconciliation_status = 'failed',
+            error_message =
+                'Synchronization lock is already held for '
+                'the appointment_type reference domain.'
+        WHERE sync_run_id = p_sync_run_id;
+
+        RETURN;
+    END IF;
 
     SELECT COUNT(*)
     INTO v_source_row_count
@@ -583,6 +640,7 @@ DECLARE
     v_started_at TIMESTAMPTZ := clock_timestamp();
     v_completed_at TIMESTAMPTZ;
     v_cache_synced_at TIMESTAMPTZ;
+    v_lock_acquired BOOLEAN := FALSE;
 
     v_checkpoint_updated_at TIMESTAMPTZ;
     v_checkpoint_key TEXT;
@@ -629,6 +687,62 @@ BEGIN
         'loading',
         v_started_at
     );
+
+
+    /*
+     * Serialize synchronization for the appointment_type reference domain.
+     *
+     * Full-refresh and incremental modes share this transaction-scoped
+     * advisory lock. Only one run may modify this cache and checkpoint
+     * domain at a time.
+     */
+    SELECT pg_try_advisory_xact_lock(
+        hashtext('sync_control.clinical_reference'),
+        hashtext('appointment_type')
+    )
+    INTO v_lock_acquired;
+
+    IF NOT v_lock_acquired THEN
+        SELECT COUNT(*)
+        INTO v_target_row_count
+        FROM facility_cache.appointment_type_reference;
+
+        v_completed_at := clock_timestamp();
+
+        UPDATE sync_control.sync_table_result
+        SET
+            table_status = 'failed',
+            completed_at = v_completed_at,
+            source_row_count = 0,
+            inserted_row_count = 0,
+            updated_row_count = 0,
+            target_row_count = v_target_row_count,
+            reconciliation_status = 'failed',
+            error_message =
+                'Synchronization lock is already held for '
+                'the appointment_type reference domain.'
+        WHERE sync_run_id = p_sync_run_id
+          AND source_table_name =
+              'central_repository.appointment_type_reference'
+          AND target_table_name =
+              'facility_cache.appointment_type_reference';
+
+        UPDATE sync_control.sync_run
+        SET
+            run_status = 'failed',
+            completed_at = v_completed_at,
+            source_row_count = 0,
+            inserted_row_count = 0,
+            updated_row_count = 0,
+            target_row_count = v_target_row_count,
+            reconciliation_status = 'failed',
+            error_message =
+                'Synchronization lock is already held for '
+                'the appointment_type reference domain.'
+        WHERE sync_run_id = p_sync_run_id;
+
+        RETURN;
+    END IF;
 
     /*
      * Read the last successfully processed compound boundary.
