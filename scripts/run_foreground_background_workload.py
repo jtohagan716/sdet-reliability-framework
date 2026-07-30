@@ -98,6 +98,7 @@ CSV_FIELD_NAMES = (
     "error_type",
     "error_message",
     "connection_strategy",
+    "pool_topology",
     "requested_batch_size",
     "selected_count",
     "updated_count",
@@ -442,7 +443,7 @@ def extract_pool_statistics(
     payload: dict[str, Any],
     *,
     expected_pool_topology: str | None = None,
-) -> dict[str, int | None]:
+) -> dict[str, int | None | str]:
     """Validate and return the bounded-pool statistics."""
 
     resources = payload.get("database_resources")
@@ -452,12 +453,14 @@ def extract_pool_statistics(
             "Response contains no database_resources object"
         )
 
+    observed_pool_topology = str(
+        resources.get("pool_topology", "")
+    )
+
     if expected_pool_topology is not None:
         validate_pool_topology(
             expected_pool_topology=expected_pool_topology,
-            observed_pool_topology=str(
-                resources.get("pool_topology", "")
-            ),
+            observed_pool_topology=observed_pool_topology,
         )
 
     pool = resources.get("pool")
@@ -475,6 +478,7 @@ def extract_pool_statistics(
         )
 
     return {
+        "pool_topology": observed_pool_topology,
         "pool_size": int(statistics.get("pool_size", 0)),
         "pool_available": int(
             statistics.get("pool_available", 0)
@@ -544,6 +548,7 @@ def build_failure_row(
         "error_type": type(error).__name__,
         "error_message": str(error),
         "connection_strategy": "",
+        "pool_topology": "",
         "requested_batch_size": "",
         "selected_count": "",
         "updated_count": "",
@@ -1041,6 +1046,30 @@ def integer_observations(
         values.append(int(value))
 
     return values
+
+
+def observed_pool_topology(
+    rows: list[dict[str, Any]],
+) -> str | None:
+    """Return the single runtime topology represented by successful rows."""
+
+    observed = {
+        str(row["pool_topology"])
+        for row in rows
+        if row.get("outcome") == "success"
+        and row.get("pool_topology")
+    }
+
+    if not observed:
+        return None
+
+    if len(observed) != 1:
+        raise RuntimeError(
+            "Run contains conflicting observed pool topologies: "
+            + ", ".join(sorted(observed))
+        )
+
+    return next(iter(observed))
 
 
 def summarize_workload(
@@ -1645,6 +1674,14 @@ def write_markdown_report(
             f"`{report['expected_connection_strategy']}`"
         ),
         (
+            "- Pool topology expected: "
+            f"`{report['expected_pool_topology']}`"
+        ),
+        (
+            "- Pool topology observed: "
+            f"`{report['observed_pool_topology'] or 'unavailable'}`"
+        ),
+        (
             "- Started UTC: "
             f"`{report['execution']['started_at_utc']}`"
         ),
@@ -1661,8 +1698,8 @@ def write_markdown_report(
         "",
         (
             "Measure latency-sensitive foreground API requests and "
-            "transactional background encounter batches while both "
-            "use the same bounded database connection pool."
+            "transactional background encounter batches while the API "
+            "uses the configured bounded connection-pool topology."
         ),
         "",
         "## Configuration",
@@ -2105,6 +2142,10 @@ def main() -> int:
         "expected_connection_strategy": (
             EXPECTED_CONNECTION_STRATEGY
         ),
+        "expected_pool_topology": (
+            configuration.expected_pool_topology
+        ),
+        "observed_pool_topology": observed_pool_topology(rows),
         "configuration": configuration_to_dict(
             configuration
         ),

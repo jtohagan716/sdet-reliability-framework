@@ -202,6 +202,7 @@ def test_extract_pool_statistics_preserves_missing_requests_queued() -> None:
     )
 
     assert statistics["requests_queued"] is None
+    assert statistics["pool_topology"] == "shared_pool"
 
 
 def test_validate_pool_topology_rejects_runtime_mismatch() -> None:
@@ -523,6 +524,67 @@ def build_empty_workload_summary() -> dict[str, Any]:
     }
 
 
+
+def test_observed_pool_topology_returns_verified_runtime_value() -> None:
+    """Successful request evidence identifies the runtime topology."""
+
+    rows = [
+        {
+            "outcome": "success",
+            "pool_topology": "isolated_pools",
+        },
+        {
+            "outcome": "success",
+            "pool_topology": "isolated_pools",
+        },
+        {
+            "outcome": "failure",
+            "pool_topology": "shared_pool",
+        },
+    ]
+
+    assert (
+        workload_runner.observed_pool_topology(rows)
+        == "isolated_pools"
+    )
+
+
+def test_observed_pool_topology_returns_none_without_successes() -> None:
+    """A failed run must not invent observed topology evidence."""
+
+    rows = [
+        {
+            "outcome": "failure",
+            "pool_topology": "",
+        }
+    ]
+
+    assert workload_runner.observed_pool_topology(rows) is None
+
+
+def test_observed_pool_topology_rejects_conflicting_evidence() -> None:
+    """One run cannot credibly report two successful topologies."""
+
+    rows = [
+        {
+            "outcome": "success",
+            "pool_topology": "shared_pool",
+        },
+        {
+            "outcome": "success",
+            "pool_topology": "isolated_pools",
+        },
+    ]
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "Run contains conflicting observed pool topologies: "
+            "isolated_pools, shared_pool"
+        ),
+    ):
+        workload_runner.observed_pool_topology(rows)
+
 def build_empty_phase_summary() -> dict[str, Any]:
     """Build an empty first-request or later-request summary."""
 
@@ -575,6 +637,7 @@ def test_write_run_artifacts_creates_reviewable_evidence(
             "request_id": "example-request",
             "client_elapsed_ms": 10.0,
             "outcome": "success",
+            "pool_topology": "isolated_pools",
             "encounter_ids": [],
         }
     )
@@ -584,6 +647,8 @@ def test_write_run_artifacts_creates_reviewable_evidence(
         "scenario": "shared_pool_mixed_workload",
         "api_base_url": "http://localhost:8000",
         "expected_connection_strategy": "bounded_pool",
+        "expected_pool_topology": "isolated_pools",
+        "observed_pool_topology": "isolated_pools",
         "configuration": {
             "foreground": {
                 "request_count": 1,
@@ -649,6 +714,7 @@ def test_write_run_artifacts_creates_reviewable_evidence(
     assert len(csv_rows) == 1
     assert csv_rows[0]["request_id"] == "example-request"
     assert csv_rows[0]["request_phase"] == "first_request"
+    assert csv_rows[0]["pool_topology"] == "isolated_pools"
 
     json_report = json.loads(
         paths["json_report"].read_text(
@@ -657,6 +723,14 @@ def test_write_run_artifacts_creates_reviewable_evidence(
     )
 
     assert json_report["run_id"] == "example-run"
+    assert (
+        json_report["expected_pool_topology"]
+        == "isolated_pools"
+    )
+    assert (
+        json_report["observed_pool_topology"]
+        == "isolated_pools"
+    )
 
     markdown_report = paths["markdown_report"].read_text(
         encoding="utf-8",
@@ -673,3 +747,19 @@ def test_write_run_artifacts_creates_reviewable_evidence(
     )
 
     assert "`request-results.csv`" in markdown_report
+    assert (
+        "Pool topology expected: `isolated_pools`"
+        in markdown_report
+    )
+    assert (
+        "Pool topology observed: `isolated_pools`"
+        in markdown_report
+    )
+    assert (
+        "uses the configured bounded connection-pool topology"
+        in markdown_report
+    )
+    assert (
+        "use the same bounded database connection pool"
+        not in markdown_report
+    )
