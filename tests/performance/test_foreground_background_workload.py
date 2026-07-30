@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +33,94 @@ def build_arguments(
 
     return argparse.Namespace(**values)
 
+@pytest.mark.parametrize(
+    ("pool_topology", "expected_scenario"),
+    (
+        ("shared_pool", "shared_pool_mixed_workload"),
+        ("isolated_pools", "isolated_pools_mixed_workload"),
+    ),
+)
+def test_build_scenario_name_identifies_pool_topology(
+    pool_topology: str,
+    expected_scenario: str,
+) -> None:
+    """Scenario evidence must identify the topology under test."""
 
+    assert (
+        workload_runner.build_scenario_name(pool_topology)
+        == expected_scenario
+    )
+
+
+@pytest.mark.parametrize(
+    ("pool_topology", "expected_run_id"),
+    (
+        (
+            "shared_pool",
+            (
+                "foreground-background-shared-pool-"
+                "20260730T181500123456Z"
+            ),
+        ),
+        (
+            "isolated_pools",
+            (
+                "foreground-background-isolated-pools-"
+                "20260730T181500123456Z"
+            ),
+        ),
+    ),
+)
+def test_build_run_id_is_deterministic_and_topology_aware(
+    pool_topology: str,
+    expected_run_id: str,
+) -> None:
+    """A fixed timestamp must produce a repeatable topology-aware ID."""
+
+    generated_at = datetime(
+        2026,
+        7,
+        30,
+        18,
+        15,
+        0,
+        123456,
+        tzinfo=UTC,
+    )
+
+    run_id = workload_runner.build_run_id(
+        pool_topology=pool_topology,
+        generated_at=generated_at,
+    )
+
+    assert run_id == expected_run_id
+
+
+@pytest.mark.parametrize(
+    "builder",
+    (
+        workload_runner.build_scenario_name,
+        lambda pool_topology: workload_runner.build_run_id(
+            pool_topology=pool_topology,
+            generated_at=datetime(
+                2026,
+                7,
+                30,
+                tzinfo=UTC,
+            ),
+        ),
+    ),
+)
+def test_evidence_naming_rejects_unsupported_topology(
+    builder: Any,
+) -> None:
+    """Unsupported topologies must never create misleading evidence."""
+
+    with pytest.raises(
+        ValueError,
+        match="Unsupported database pool topology: unknown_pool",
+    ):
+        builder("unknown_pool")
 
 def test_parse_arguments_defaults_to_shared_pool(
     monkeypatch: pytest.MonkeyPatch,

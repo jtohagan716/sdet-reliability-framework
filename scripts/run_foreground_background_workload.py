@@ -36,7 +36,42 @@ TEST_RUNS_DIRECTORY = REPOSITORY_ROOT / "reports" / "test-runs"
 
 DEFAULT_API_BASE_URL = "http://localhost:8000"
 EXPECTED_CONNECTION_STRATEGY = "bounded_pool"
-SCENARIO_NAME = "shared_pool_mixed_workload"
+SUPPORTED_POOL_TOPOLOGIES = (
+    "shared_pool",
+    "isolated_pools",
+)
+
+
+def build_scenario_name(pool_topology: str) -> str:
+    """Build an evidence scenario name for one pool topology."""
+
+    if pool_topology not in SUPPORTED_POOL_TOPOLOGIES:
+        raise ValueError(
+            f"Unsupported database pool topology: {pool_topology}"
+        )
+
+    return f"{pool_topology}_mixed_workload"
+
+
+def build_run_id(
+    *,
+    pool_topology: str,
+    generated_at: datetime,
+) -> str:
+    """Build a deterministic topology-aware workload run identifier."""
+
+    if pool_topology not in SUPPORTED_POOL_TOPOLOGIES:
+        raise ValueError(
+            f"Unsupported database pool topology: {pool_topology}"
+        )
+
+    topology_label = pool_topology.replace("_", "-")
+    timestamp = generated_at.strftime("%Y%m%dT%H%M%S%fZ")
+
+    return (
+        f"foreground-background-{topology_label}-"
+        f"{timestamp}"
+    )
 
 DATABASE_PHASE_NAMES = (
     "acquire_ms",
@@ -1838,7 +1873,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--expected-pool-topology",
-        choices=("shared_pool", "isolated_pools"),
+        choices=SUPPORTED_POOL_TOPOLOGIES,
         default="shared_pool",
         help=(
             "Database pool topology the API must report during the run. "
@@ -1885,6 +1920,10 @@ def display_configuration(
 
     print("FOREGROUND/BACKGROUND WORKLOAD CONFIGURATION")
     print("--------------------------------------------")
+    print(
+        "Expected pool topology:",
+        configuration.expected_pool_topology,
+    )
     print(
         "Foreground requests:",
         configuration.foreground.request_count,
@@ -1991,9 +2030,9 @@ def main() -> int:
 
     display_configuration(configuration)
 
-    run_id = utc_now().strftime(
-        "foreground-background-shared-pool-"
-        "%Y%m%dT%H%M%S%fZ"
+    run_id = build_run_id(
+        pool_topology=configuration.expected_pool_topology,
+        generated_at=utc_now(),
     )
 
     run_directory = create_run_directory(run_id)
@@ -2058,7 +2097,9 @@ def main() -> int:
 
     report = {
         "run_id": run_id,
-        "scenario": SCENARIO_NAME,
+        "scenario": build_scenario_name(
+            configuration.expected_pool_topology
+        ),
         "generated_at_utc": utc_timestamp(),
         "api_base_url": api_base_url,
         "expected_connection_strategy": (
