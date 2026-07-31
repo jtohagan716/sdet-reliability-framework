@@ -99,6 +99,12 @@ CSV_FIELD_NAMES = (
     "error_message",
     "connection_strategy",
     "pool_topology",
+    "pool_name",
+    "pool_min_size",
+    "pool_max_size",
+    "pool_timeout_seconds",
+    "pool_startup_timeout_seconds",
+    "pool_max_waiting",
     "requested_batch_size",
     "selected_count",
     "updated_count",
@@ -443,8 +449,8 @@ def extract_pool_statistics(
     payload: dict[str, Any],
     *,
     expected_pool_topology: str | None = None,
-) -> dict[str, int | None | str]:
-    """Validate and return the bounded-pool statistics."""
+) -> dict[str, Any]:
+    """Validate and return bounded-pool configuration and statistics."""
 
     resources = payload.get("database_resources")
 
@@ -470,6 +476,40 @@ def extract_pool_statistics(
             "Bounded-pool response contains no pool state"
         )
 
+    pool_name = str(pool.get("name", "")).strip()
+
+    if not pool_name:
+        raise RuntimeError(
+            "Bounded-pool response contains no pool name"
+        )
+
+    configuration = pool.get("configuration")
+
+    if not isinstance(configuration, dict):
+        raise RuntimeError(
+            "Bounded-pool response contains no pool configuration"
+        )
+
+    required_configuration_fields = (
+        "min_size",
+        "max_size",
+        "timeout_seconds",
+        "startup_timeout_seconds",
+        "max_waiting",
+    )
+
+    missing_configuration_fields = [
+        field_name
+        for field_name in required_configuration_fields
+        if configuration.get(field_name) is None
+    ]
+
+    if missing_configuration_fields:
+        raise RuntimeError(
+            "Bounded-pool response is missing configuration fields: "
+            + ", ".join(missing_configuration_fields)
+        )
+
     statistics = pool.get("statistics")
 
     if not isinstance(statistics, dict):
@@ -479,6 +519,16 @@ def extract_pool_statistics(
 
     return {
         "pool_topology": observed_pool_topology,
+        "pool_name": pool_name,
+        "pool_min_size": int(configuration["min_size"]),
+        "pool_max_size": int(configuration["max_size"]),
+        "pool_timeout_seconds": float(
+            configuration["timeout_seconds"]
+        ),
+        "pool_startup_timeout_seconds": float(
+            configuration["startup_timeout_seconds"]
+        ),
+        "pool_max_waiting": int(configuration["max_waiting"]),
         "pool_size": int(statistics.get("pool_size", 0)),
         "pool_available": int(
             statistics.get("pool_available", 0)
@@ -549,6 +599,12 @@ def build_failure_row(
         "error_message": str(error),
         "connection_strategy": "",
         "pool_topology": "",
+        "pool_name": "",
+        "pool_min_size": "",
+        "pool_max_size": "",
+        "pool_timeout_seconds": "",
+        "pool_startup_timeout_seconds": "",
+        "pool_max_waiting": "",
         "requested_batch_size": "",
         "selected_count": "",
         "updated_count": "",
@@ -1070,6 +1126,133 @@ def observed_pool_topology(
         )
 
     return next(iter(observed))
+
+
+
+def observed_pool_configuration(
+    rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Return runtime-verified pool budgets represented by successful rows."""
+
+    configuration_fields = (
+        "pool_name",
+        "pool_min_size",
+        "pool_max_size",
+        "pool_timeout_seconds",
+        "pool_startup_timeout_seconds",
+        "pool_max_waiting",
+    )
+
+    workload_configurations: dict[
+        str,
+        dict[str, Any] | None,
+    ] = {}
+
+    unique_pools: dict[str, dict[str, Any]] = {}
+
+    for workload_type in ("foreground", "background"):
+        successful_rows = [
+            row
+            for row in rows
+            if row.get("outcome") == "success"
+            and row.get("workload_type") == workload_type
+        ]
+
+        if not successful_rows:
+            workload_configurations[workload_type] = None
+            continue
+
+        observed_configurations: set[
+            tuple[str, int, int, float, float, int]
+        ] = set()
+
+        for row in successful_rows:
+            missing_fields = [
+                field_name
+                for field_name in configuration_fields
+                if row.get(field_name) in ("", None)
+            ]
+
+            if missing_fields:
+                raise RuntimeError(
+                    f"{workload_type.title()} evidence is missing "
+                    "pool configuration fields: "
+                    + ", ".join(missing_fields)
+                )
+
+            observed_configurations.add(
+                (
+                    str(row["pool_name"]),
+                    int(row["pool_min_size"]),
+                    int(row["pool_max_size"]),
+                    float(row["pool_timeout_seconds"]),
+                    float(
+                        row["pool_startup_timeout_seconds"]
+                    ),
+                    int(row["pool_max_waiting"]),
+                )
+            )
+
+        if len(observed_configurations) != 1:
+            raise RuntimeError(
+                f"{workload_type.title()} evidence contains "
+                "conflicting pool configurations"
+            )
+
+        (
+            pool_name,
+            minimum_size,
+            maximum_size,
+            timeout_seconds,
+            startup_timeout_seconds,
+            maximum_waiting,
+        ) = next(iter(observed_configurations))
+
+        resolved_configuration = {
+            "pool_name": pool_name,
+            "min_size": minimum_size,
+            "max_size": maximum_size,
+            "timeout_seconds": timeout_seconds,
+            "startup_timeout_seconds": (
+                startup_timeout_seconds
+            ),
+            "max_waiting": maximum_waiting,
+        }
+
+        existing_configuration = unique_pools.get(pool_name)
+
+        if (
+            existing_configuration is not None
+            and existing_configuration
+            != resolved_configuration
+        ):
+            raise RuntimeError(
+                f"Pool {pool_name!r} contains conflicting "
+                "runtime configurations"
+            )
+
+        workload_configurations[workload_type] = (
+            resolved_configuration
+        )
+        unique_pools[pool_name] = resolved_configuration
+
+    return {
+        "foreground": workload_configurations.get(
+            "foreground"
+        ),
+        "background": workload_configurations.get(
+            "background"
+        ),
+        "unique_pool_count": len(unique_pools),
+        "combined_min_size": sum(
+            int(configuration["min_size"])
+            for configuration in unique_pools.values()
+        ),
+        "combined_max_size": sum(
+            int(configuration["max_size"])
+            for configuration in unique_pools.values()
+        ),
+    }
 
 
 def summarize_workload(
@@ -2146,6 +2329,9 @@ def main() -> int:
             configuration.expected_pool_topology
         ),
         "observed_pool_topology": observed_pool_topology(rows),
+        "observed_pool_configuration": (
+            observed_pool_configuration(rows)
+        ),
         "configuration": configuration_to_dict(
             configuration
         ),

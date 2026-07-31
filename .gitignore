@@ -52,3 +52,6 @@ reports/connection_per_request*.log
 reports/connection_per_request*.csv
 reports/latest_correlated_run_id.txt
 reports/test-runs/
+
+# Generated current OpenAPI snapshot
+reports/current-openapi.json
