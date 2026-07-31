@@ -36,7 +36,42 @@ TEST_RUNS_DIRECTORY = REPOSITORY_ROOT / "reports" / "test-runs"
 
 DEFAULT_API_BASE_URL = "http://localhost:8000"
 EXPECTED_CONNECTION_STRATEGY = "bounded_pool"
-SCENARIO_NAME = "shared_pool_mixed_workload"
+SUPPORTED_POOL_TOPOLOGIES = (
+    "shared_pool",
+    "isolated_pools",
+)
+
+
+def build_scenario_name(pool_topology: str) -> str:
+    """Build an evidence scenario name for one pool topology."""
+
+    if pool_topology not in SUPPORTED_POOL_TOPOLOGIES:
+        raise ValueError(
+            f"Unsupported database pool topology: {pool_topology}"
+        )
+
+    return f"{pool_topology}_mixed_workload"
+
+
+def build_run_id(
+    *,
+    pool_topology: str,
+    generated_at: datetime,
+) -> str:
+    """Build a deterministic topology-aware workload run identifier."""
+
+    if pool_topology not in SUPPORTED_POOL_TOPOLOGIES:
+        raise ValueError(
+            f"Unsupported database pool topology: {pool_topology}"
+        )
+
+    topology_label = pool_topology.replace("_", "-")
+    timestamp = generated_at.strftime("%Y%m%dT%H%M%S%fZ")
+
+    return (
+        f"foreground-background-{topology_label}-"
+        f"{timestamp}"
+    )
 
 DATABASE_PHASE_NAMES = (
     "acquire_ms",
@@ -63,6 +98,13 @@ CSV_FIELD_NAMES = (
     "error_type",
     "error_message",
     "connection_strategy",
+    "pool_topology",
+    "pool_name",
+    "pool_min_size",
+    "pool_max_size",
+    "pool_timeout_seconds",
+    "pool_startup_timeout_seconds",
+    "pool_max_waiting",
     "requested_batch_size",
     "selected_count",
     "updated_count",
@@ -119,6 +161,7 @@ class WorkloadConfiguration:
 class MixedWorkloadConfiguration:
     """Describe one foreground-versus-background experiment."""
 
+    expected_pool_topology: str
     foreground: WorkloadConfiguration
     background: WorkloadConfiguration
     foreground_connection_hold_ms: int
@@ -386,10 +429,28 @@ def extract_database_timings(
     return normalized
 
 
+def validate_pool_topology(
+    *,
+    expected_pool_topology: str,
+    observed_pool_topology: str,
+) -> None:
+    """Reject evidence collected from an unexpected pool topology."""
+
+    if observed_pool_topology != expected_pool_topology:
+        raise RuntimeError(
+            "Expected database pool topology "
+            f"'{expected_pool_topology}', "
+            "but the API reported "
+            f"'{observed_pool_topology}'"
+        )
+
+
 def extract_pool_statistics(
     payload: dict[str, Any],
-) -> dict[str, int]:
-    """Validate and return the bounded-pool statistics."""
+    *,
+    expected_pool_topology: str | None = None,
+) -> dict[str, Any]:
+    """Validate and return bounded-pool configuration and statistics."""
 
     resources = payload.get("database_resources")
 
@@ -398,11 +459,55 @@ def extract_pool_statistics(
             "Response contains no database_resources object"
         )
 
+    observed_pool_topology = str(
+        resources.get("pool_topology", "")
+    )
+
+    if expected_pool_topology is not None:
+        validate_pool_topology(
+            expected_pool_topology=expected_pool_topology,
+            observed_pool_topology=observed_pool_topology,
+        )
+
     pool = resources.get("pool")
 
     if not isinstance(pool, dict):
         raise RuntimeError(
             "Bounded-pool response contains no pool state"
+        )
+
+    pool_name = str(pool.get("name", "")).strip()
+
+    if not pool_name:
+        raise RuntimeError(
+            "Bounded-pool response contains no pool name"
+        )
+
+    configuration = pool.get("configuration")
+
+    if not isinstance(configuration, dict):
+        raise RuntimeError(
+            "Bounded-pool response contains no pool configuration"
+        )
+
+    required_configuration_fields = (
+        "min_size",
+        "max_size",
+        "timeout_seconds",
+        "startup_timeout_seconds",
+        "max_waiting",
+    )
+
+    missing_configuration_fields = [
+        field_name
+        for field_name in required_configuration_fields
+        if configuration.get(field_name) is None
+    ]
+
+    if missing_configuration_fields:
+        raise RuntimeError(
+            "Bounded-pool response is missing configuration fields: "
+            + ", ".join(missing_configuration_fields)
         )
 
     statistics = pool.get("statistics")
@@ -413,6 +518,17 @@ def extract_pool_statistics(
         )
 
     return {
+        "pool_topology": observed_pool_topology,
+        "pool_name": pool_name,
+        "pool_min_size": int(configuration["min_size"]),
+        "pool_max_size": int(configuration["max_size"]),
+        "pool_timeout_seconds": float(
+            configuration["timeout_seconds"]
+        ),
+        "pool_startup_timeout_seconds": float(
+            configuration["startup_timeout_seconds"]
+        ),
+        "pool_max_waiting": int(configuration["max_waiting"]),
         "pool_size": int(statistics.get("pool_size", 0)),
         "pool_available": int(
             statistics.get("pool_available", 0)
@@ -420,8 +536,10 @@ def extract_pool_statistics(
         "requests_waiting": int(
             statistics.get("requests_waiting", 0)
         ),
-        "requests_queued": int(
-            statistics.get("requests_queued", 0)
+        "requests_queued": (
+            int(statistics["requests_queued"])
+            if statistics.get("requests_queued") is not None
+            else None
         ),
     }
 
@@ -480,6 +598,13 @@ def build_failure_row(
         "error_type": type(error).__name__,
         "error_message": str(error),
         "connection_strategy": "",
+        "pool_topology": "",
+        "pool_name": "",
+        "pool_min_size": "",
+        "pool_max_size": "",
+        "pool_timeout_seconds": "",
+        "pool_startup_timeout_seconds": "",
+        "pool_max_waiting": "",
         "requested_batch_size": "",
         "selected_count": "",
         "updated_count": "",
@@ -613,7 +738,12 @@ def execute_foreground_worker(
                     field_name="database_phases",
                 )
 
-                pool = extract_pool_statistics(payload)
+                pool = extract_pool_statistics(
+                    payload,
+                    expected_pool_topology=(
+                        configuration.expected_pool_topology
+                    ),
+                )
 
                 rows.append(
                     {
@@ -815,7 +945,12 @@ def execute_background_worker(
                     field_name="database_timings",
                 )
 
-                pool = extract_pool_statistics(payload)
+                pool = extract_pool_statistics(
+                    payload,
+                    expected_pool_topology=(
+                        configuration.expected_pool_topology
+                    ),
+                )
 
                 rows.append(
                     {
@@ -967,6 +1102,157 @@ def integer_observations(
         values.append(int(value))
 
     return values
+
+
+def observed_pool_topology(
+    rows: list[dict[str, Any]],
+) -> str | None:
+    """Return the single runtime topology represented by successful rows."""
+
+    observed = {
+        str(row["pool_topology"])
+        for row in rows
+        if row.get("outcome") == "success"
+        and row.get("pool_topology")
+    }
+
+    if not observed:
+        return None
+
+    if len(observed) != 1:
+        raise RuntimeError(
+            "Run contains conflicting observed pool topologies: "
+            + ", ".join(sorted(observed))
+        )
+
+    return next(iter(observed))
+
+
+
+def observed_pool_configuration(
+    rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Return runtime-verified pool budgets represented by successful rows."""
+
+    configuration_fields = (
+        "pool_name",
+        "pool_min_size",
+        "pool_max_size",
+        "pool_timeout_seconds",
+        "pool_startup_timeout_seconds",
+        "pool_max_waiting",
+    )
+
+    workload_configurations: dict[
+        str,
+        dict[str, Any] | None,
+    ] = {}
+
+    unique_pools: dict[str, dict[str, Any]] = {}
+
+    for workload_type in ("foreground", "background"):
+        successful_rows = [
+            row
+            for row in rows
+            if row.get("outcome") == "success"
+            and row.get("workload_type") == workload_type
+        ]
+
+        if not successful_rows:
+            workload_configurations[workload_type] = None
+            continue
+
+        observed_configurations: set[
+            tuple[str, int, int, float, float, int]
+        ] = set()
+
+        for row in successful_rows:
+            missing_fields = [
+                field_name
+                for field_name in configuration_fields
+                if row.get(field_name) in ("", None)
+            ]
+
+            if missing_fields:
+                raise RuntimeError(
+                    f"{workload_type.title()} evidence is missing "
+                    "pool configuration fields: "
+                    + ", ".join(missing_fields)
+                )
+
+            observed_configurations.add(
+                (
+                    str(row["pool_name"]),
+                    int(row["pool_min_size"]),
+                    int(row["pool_max_size"]),
+                    float(row["pool_timeout_seconds"]),
+                    float(
+                        row["pool_startup_timeout_seconds"]
+                    ),
+                    int(row["pool_max_waiting"]),
+                )
+            )
+
+        if len(observed_configurations) != 1:
+            raise RuntimeError(
+                f"{workload_type.title()} evidence contains "
+                "conflicting pool configurations"
+            )
+
+        (
+            pool_name,
+            minimum_size,
+            maximum_size,
+            timeout_seconds,
+            startup_timeout_seconds,
+            maximum_waiting,
+        ) = next(iter(observed_configurations))
+
+        resolved_configuration = {
+            "pool_name": pool_name,
+            "min_size": minimum_size,
+            "max_size": maximum_size,
+            "timeout_seconds": timeout_seconds,
+            "startup_timeout_seconds": (
+                startup_timeout_seconds
+            ),
+            "max_waiting": maximum_waiting,
+        }
+
+        existing_configuration = unique_pools.get(pool_name)
+
+        if (
+            existing_configuration is not None
+            and existing_configuration
+            != resolved_configuration
+        ):
+            raise RuntimeError(
+                f"Pool {pool_name!r} contains conflicting "
+                "runtime configurations"
+            )
+
+        workload_configurations[workload_type] = (
+            resolved_configuration
+        )
+        unique_pools[pool_name] = resolved_configuration
+
+    return {
+        "foreground": workload_configurations.get(
+            "foreground"
+        ),
+        "background": workload_configurations.get(
+            "background"
+        ),
+        "unique_pool_count": len(unique_pools),
+        "combined_min_size": sum(
+            int(configuration["min_size"])
+            for configuration in unique_pools.values()
+        ),
+        "combined_max_size": sum(
+            int(configuration["max_size"])
+            for configuration in unique_pools.values()
+        ),
+    }
 
 
 def summarize_workload(
@@ -1543,7 +1829,7 @@ def workload_markdown_section(
             lines.append(
                 "- "
                 f"`{failure['request_id']}`: "
-                f"{failure['error_type']} â€” "
+                f"{failure['error_type']} — "
                 f"{failure['error_message']}"
             )
 
@@ -1571,6 +1857,14 @@ def write_markdown_report(
             f"`{report['expected_connection_strategy']}`"
         ),
         (
+            "- Pool topology expected: "
+            f"`{report['expected_pool_topology']}`"
+        ),
+        (
+            "- Pool topology observed: "
+            f"`{report['observed_pool_topology'] or 'unavailable'}`"
+        ),
+        (
             "- Started UTC: "
             f"`{report['execution']['started_at_utc']}`"
         ),
@@ -1587,8 +1881,8 @@ def write_markdown_report(
         "",
         (
             "Measure latency-sensitive foreground API requests and "
-            "transactional background encounter batches while both "
-            "use the same bounded database connection pool."
+            "transactional background encounter batches while the API "
+            "uses the configured bounded connection-pool topology."
         ),
         "",
         "## Configuration",
@@ -1797,8 +2091,18 @@ def parse_arguments() -> argparse.Namespace:
         type=float,
         default=15.0,
     )
+    parser.add_argument(
+        "--expected-pool-topology",
+        choices=SUPPORTED_POOL_TOPOLOGIES,
+        default="shared_pool",
+        help=(
+            "Database pool topology the API must report during the run. "
+            "Defaults to shared_pool."
+        ),
+    )
 
     return parser.parse_args()
+
 
 
 def build_configuration(
@@ -1807,6 +2111,7 @@ def build_configuration(
     """Build and validate an immutable study configuration."""
 
     configuration = MixedWorkloadConfiguration(
+        expected_pool_topology=arguments.expected_pool_topology,
         foreground=WorkloadConfiguration(
             request_count=arguments.foreground_request_count,
             concurrency=arguments.foreground_concurrency,
@@ -1835,6 +2140,10 @@ def display_configuration(
 
     print("FOREGROUND/BACKGROUND WORKLOAD CONFIGURATION")
     print("--------------------------------------------")
+    print(
+        "Expected pool topology:",
+        configuration.expected_pool_topology,
+    )
     print(
         "Foreground requests:",
         configuration.foreground.request_count,
@@ -1941,9 +2250,9 @@ def main() -> int:
 
     display_configuration(configuration)
 
-    run_id = utc_now().strftime(
-        "foreground-background-shared-pool-"
-        "%Y%m%dT%H%M%S%fZ"
+    run_id = build_run_id(
+        pool_topology=configuration.expected_pool_topology,
+        generated_at=utc_now(),
     )
 
     run_directory = create_run_directory(run_id)
@@ -2008,11 +2317,20 @@ def main() -> int:
 
     report = {
         "run_id": run_id,
-        "scenario": SCENARIO_NAME,
+        "scenario": build_scenario_name(
+            configuration.expected_pool_topology
+        ),
         "generated_at_utc": utc_timestamp(),
         "api_base_url": api_base_url,
         "expected_connection_strategy": (
             EXPECTED_CONNECTION_STRATEGY
+        ),
+        "expected_pool_topology": (
+            configuration.expected_pool_topology
+        ),
+        "observed_pool_topology": observed_pool_topology(rows),
+        "observed_pool_configuration": (
+            observed_pool_configuration(rows)
         ),
         "configuration": configuration_to_dict(
             configuration

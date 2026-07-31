@@ -1,0 +1,243 @@
+{
+  "findings": {
+    "isolated_reduced_foreground_acquisition": true,
+    "isolated_reduced_foreground_p95": false,
+    "isolated_reduced_waiting_trials": true
+  },
+  "results": {
+    "foreground_acquire_p95_reduction_percent": 98.735,
+    "isolated_pools": {
+      "foreground_waiting_trial_count": 0,
+      "means": {
+        "background_p95_ms": 114.189,
+        "elapsed_seconds": 1.373,
+        "foreground_acquire_p95_ms": 0.151,
+        "foreground_later_average_ms": 125.731,
+        "foreground_p50_ms": 123.993,
+        "foreground_p95_ms": 172.117
+      },
+      "ranges": {
+        "background_p95_ms": {
+          "maximum": 165.868,
+          "minimum": 81.736
+        },
+        "elapsed_seconds": {
+          "maximum": 1.524,
+          "minimum": 1.282
+        },
+        "foreground_acquire_p95_ms": {
+          "maximum": 0.289,
+          "minimum": 0.07
+        },
+        "foreground_later_average_ms": {
+          "maximum": 137.366,
+          "minimum": 116.724
+        },
+        "foreground_p50_ms": {
+          "maximum": 135.026,
+          "minimum": 114.361
+        },
+        "foreground_p95_ms": {
+          "maximum": 201.201,
+          "minimum": 150.03
+        }
+      },
+      "run_count": 3,
+      "runs": [
+        {
+          "background_p95_ms": 81.736,
+          "elapsed_seconds": 1.312,
+          "foreground_acquire_p95_ms": 0.289,
+          "foreground_later_average_ms": 123.104,
+          "foreground_p50_ms": 122.591,
+          "foreground_p95_ms": 150.03,
+          "foreground_peak_requests_waiting": 0,
+          "run_id": "foreground-background-isolated-pools-20260730T204340930176Z"
+        },
+        {
+          "background_p95_ms": 165.868,
+          "elapsed_seconds": 1.524,
+          "foreground_acquire_p95_ms": 0.093,
+          "foreground_later_average_ms": 137.366,
+          "foreground_p50_ms": 135.026,
+          "foreground_p95_ms": 201.201,
+          "foreground_peak_requests_waiting": 0,
+          "run_id": "foreground-background-isolated-pools-20260730T204345191440Z"
+        },
+        {
+          "background_p95_ms": 94.963,
+          "elapsed_seconds": 1.282,
+          "foreground_acquire_p95_ms": 0.07,
+          "foreground_later_average_ms": 116.724,
+          "foreground_p50_ms": 114.361,
+          "foreground_p95_ms": 165.121,
+          "foreground_peak_requests_waiting": 0,
+          "run_id": "foreground-background-isolated-pools-20260730T204349668017Z"
+        }
+      ]
+    },
+    "isolated_vs_shared_percent_change": {
+      "background_p95_ms": 28.681,
+      "elapsed_seconds": 8.709,
+      "foreground_acquire_p95_ms": -98.735,
+      "foreground_later_average_ms": 7.897,
+      "foreground_p50_ms": 8.576,
+      "foreground_p95_ms": 8.456
+    },
+    "shared_pool": {
+      "foreground_waiting_trial_count": 3,
+      "means": {
+        "background_p95_ms": 88.738,
+        "elapsed_seconds": 1.263,
+        "foreground_acquire_p95_ms": 11.936,
+        "foreground_later_average_ms": 116.529,
+        "foreground_p50_ms": 114.199,
+        "foreground_p95_ms": 158.698
+      },
+      "ranges": {
+        "background_p95_ms": {
+          "maximum": 95.169,
+          "minimum": 84.589
+        },
+        "elapsed_seconds": {
+          "maximum": 1.341,
+          "minimum": 1.211
+        },
+        "foreground_acquire_p95_ms": {
+          "maximum": 14.594,
+          "minimum": 6.658
+        },
+        "foreground_later_average_ms": {
+          "maximum": 122.638,
+          "minimum": 112.54
+        },
+        "foreground_p50_ms": {
+          "maximum": 119.837,
+          "minimum": 109.321
+        },
+        "foreground_p95_ms": {
+          "maximum": 172.906,
+          "minimum": 149.747
+        }
+      },
+      "run_count": 3,
+      "runs": [
+        {
+          "background_p95_ms": 84.589,
+          "elapsed_seconds": 1.211,
+          "foreground_acquire_p95_ms": 14.594,
+          "foreground_later_average_ms": 114.41,
+          "foreground_p50_ms": 113.44,
+          "foreground_p95_ms": 149.747,
+          "foreground_peak_requests_waiting": 1,
+          "run_id": "foreground-background-shared-pool-20260730T204616076911Z"
+        },
+        {
+          "background_p95_ms": 86.455,
+          "elapsed_seconds": 1.341,
+          "foreground_acquire_p95_ms": 6.658,
+          "foreground_later_average_ms": 122.638,
+          "foreground_p50_ms": 119.837,
+          "foreground_p95_ms": 172.906,
+          "foreground_peak_requests_waiting": 1,
+          "run_id": "foreground-background-shared-pool-20260730T204620139550Z"
+        },
+        {
+          "background_p95_ms": 95.169,
+          "elapsed_seconds": 1.238,
+          "foreground_acquire_p95_ms": 14.555,
+          "foreground_later_average_ms": 112.54,
+          "foreground_p50_ms": 109.321,
+          "foreground_p95_ms": 153.44,
+          "foreground_peak_requests_waiting": 1,
+          "run_id": "foreground-background-shared-pool-20260730T204624455404Z"
+        }
+      ]
+    }
+  },
+  "runtime_pool_configurations": {
+    "isolated_pools": {
+      "background": {
+        "max_size": 2,
+        "max_waiting": 10,
+        "min_size": 1,
+        "pool_name": "background-worker-pool",
+        "startup_timeout_seconds": 30.0,
+        "timeout_seconds": 5.0
+      },
+      "combined_max_size": 8,
+      "combined_min_size": 4,
+      "foreground": {
+        "max_size": 6,
+        "max_waiting": 40,
+        "min_size": 3,
+        "pool_name": "interactive-api-pool",
+        "startup_timeout_seconds": 30.0,
+        "timeout_seconds": 5.0
+      },
+      "unique_pool_count": 2
+    },
+    "shared_pool": {
+      "background": {
+        "max_size": 8,
+        "max_waiting": 40,
+        "min_size": 4,
+        "pool_name": "interactive-api-pool",
+        "startup_timeout_seconds": 30.0,
+        "timeout_seconds": 5.0
+      },
+      "combined_max_size": 8,
+      "combined_min_size": 4,
+      "foreground": {
+        "max_size": 8,
+        "max_waiting": 40,
+        "min_size": 4,
+        "pool_name": "interactive-api-pool",
+        "startup_timeout_seconds": 30.0,
+        "timeout_seconds": 5.0
+      },
+      "unique_pool_count": 1
+    }
+  },
+  "source_run_ids": {
+    "isolated_pools": [
+      "foreground-background-isolated-pools-20260730T204340930176Z",
+      "foreground-background-isolated-pools-20260730T204345191440Z",
+      "foreground-background-isolated-pools-20260730T204349668017Z"
+    ],
+    "shared_pool": [
+      "foreground-background-shared-pool-20260730T204616076911Z",
+      "foreground-background-shared-pool-20260730T204620139550Z",
+      "foreground-background-shared-pool-20260730T204624455404Z"
+    ]
+  },
+  "study": {
+    "equal_connection_budget": {
+      "combined_max_size": 8,
+      "combined_min_size": 4
+    },
+    "name": "Shared versus isolated PostgreSQL connection pools",
+    "runs_per_topology": 3,
+    "total_run_count": 6,
+    "workload_configuration": {
+      "background": {
+        "batch_size": 2,
+        "concurrency": 4,
+        "request_count": 20,
+        "requests_per_worker": 5,
+        "required_encounter_count": 40
+      },
+      "combined": {
+        "connect_timeout_seconds": 3.0,
+        "read_timeout_seconds": 15.0,
+        "total_concurrency": 10
+      },
+      "foreground": {
+        "concurrency": 6,
+        "connection_hold_ms": 100,
+        "request_count": 60,
+        "requests_per_worker": 10
+      }
+    }
+  }
+}

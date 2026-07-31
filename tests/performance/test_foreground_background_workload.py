@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,7 @@ def build_arguments(
     """Build valid command-line arguments with optional overrides."""
 
     values: dict[str, Any] = {
+        "expected_pool_topology": "shared_pool",
         "foreground_request_count": 20,
         "foreground_concurrency": 4,
         "foreground_connection_hold_ms": 0,
@@ -31,6 +33,352 @@ def build_arguments(
 
     return argparse.Namespace(**values)
 
+@pytest.mark.parametrize(
+    ("pool_topology", "expected_scenario"),
+    (
+        ("shared_pool", "shared_pool_mixed_workload"),
+        ("isolated_pools", "isolated_pools_mixed_workload"),
+    ),
+)
+def test_build_scenario_name_identifies_pool_topology(
+    pool_topology: str,
+    expected_scenario: str,
+) -> None:
+    """Scenario evidence must identify the topology under test."""
+
+    assert (
+        workload_runner.build_scenario_name(pool_topology)
+        == expected_scenario
+    )
+
+
+@pytest.mark.parametrize(
+    ("pool_topology", "expected_run_id"),
+    (
+        (
+            "shared_pool",
+            (
+                "foreground-background-shared-pool-"
+                "20260730T181500123456Z"
+            ),
+        ),
+        (
+            "isolated_pools",
+            (
+                "foreground-background-isolated-pools-"
+                "20260730T181500123456Z"
+            ),
+        ),
+    ),
+)
+def test_build_run_id_is_deterministic_and_topology_aware(
+    pool_topology: str,
+    expected_run_id: str,
+) -> None:
+    """A fixed timestamp must produce a repeatable topology-aware ID."""
+
+    generated_at = datetime(
+        2026,
+        7,
+        30,
+        18,
+        15,
+        0,
+        123456,
+        tzinfo=UTC,
+    )
+
+    run_id = workload_runner.build_run_id(
+        pool_topology=pool_topology,
+        generated_at=generated_at,
+    )
+
+    assert run_id == expected_run_id
+
+
+@pytest.mark.parametrize(
+    "builder",
+    (
+        workload_runner.build_scenario_name,
+        lambda pool_topology: workload_runner.build_run_id(
+            pool_topology=pool_topology,
+            generated_at=datetime(
+                2026,
+                7,
+                30,
+                tzinfo=UTC,
+            ),
+        ),
+    ),
+)
+def test_evidence_naming_rejects_unsupported_topology(
+    builder: Any,
+) -> None:
+    """Unsupported topologies must never create misleading evidence."""
+
+    with pytest.raises(
+        ValueError,
+        match="Unsupported database pool topology: unknown_pool",
+    ):
+        builder("unknown_pool")
+
+def test_parse_arguments_defaults_to_shared_pool(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The original shared-pool scenario remains the CLI default."""
+
+    monkeypatch.setattr(
+        "sys.argv",
+        ["run_foreground_background_workload.py"],
+    )
+
+    arguments = workload_runner.parse_arguments()
+
+    assert arguments.expected_pool_topology == "shared_pool"
+
+
+def test_extract_pool_statistics_rejects_unexpected_topology() -> None:
+    """Pool evidence must come from the requested runtime topology."""
+
+    payload = {
+        "database_resources": {
+            "connection_strategy": "bounded_pool",
+            "pool_topology": "isolated_pools",
+            "workload": "foreground",
+            "pool": {
+                "name": "interactive-api-pool",
+                "configuration": {
+                    "min_size": 4,
+                    "max_size": 8,
+                    "timeout_seconds": 5.0,
+                    "startup_timeout_seconds": 30.0,
+                    "max_waiting": 40,
+                },
+                "statistics": {
+                    "pool_size": 4,
+                    "pool_available": 3,
+                    "requests_waiting": 1,
+                },
+            },
+        },
+    }
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "Expected database pool topology 'shared_pool', "
+            "but the API reported 'isolated_pools'"
+        ),
+    ):
+        workload_runner.extract_pool_statistics(
+            payload,
+            expected_pool_topology="shared_pool",
+        )
+
+
+def test_extract_pool_statistics_preserves_missing_requests_queued() -> None:
+    """An unavailable queue metric must not be reported as measured zero."""
+
+    payload = {
+        "database_resources": {
+            "connection_strategy": "bounded_pool",
+            "pool_topology": "shared_pool",
+            "workload": "foreground",
+            "pool": {
+                "name": "interactive-api-pool",
+                "configuration": {
+                    "min_size": 4,
+                    "max_size": 8,
+                    "timeout_seconds": 5.0,
+                    "startup_timeout_seconds": 30.0,
+                    "max_waiting": 40,
+                },
+                "statistics": {
+                    "pool_size": 4,
+                    "pool_available": 3,
+                    "requests_waiting": 1,
+                },
+            },
+        },
+    }
+
+    statistics = workload_runner.extract_pool_statistics(
+        payload,
+        expected_pool_topology="shared_pool",
+    )
+
+    assert statistics["requests_queued"] is None
+    assert statistics["pool_topology"] == "shared_pool"
+
+
+def build_pool_evidence_row(
+    *,
+    workload_type: str,
+    pool_name: str,
+    minimum_size: int,
+    maximum_size: int,
+    maximum_waiting: int,
+) -> dict[str, object]:
+    """Build one successful runtime pool-configuration evidence row."""
+
+    return {
+        "outcome": "success",
+        "workload_type": workload_type,
+        "pool_name": pool_name,
+        "pool_min_size": minimum_size,
+        "pool_max_size": maximum_size,
+        "pool_timeout_seconds": 5.0,
+        "pool_startup_timeout_seconds": 30.0,
+        "pool_max_waiting": maximum_waiting,
+    }
+
+
+def test_observed_pool_configuration_counts_shared_pool_once() -> None:
+    """Shared workloads must contribute one physical pool budget."""
+
+    rows = [
+        build_pool_evidence_row(
+            workload_type="foreground",
+            pool_name="interactive-api-pool",
+            minimum_size=4,
+            maximum_size=8,
+            maximum_waiting=40,
+        ),
+        build_pool_evidence_row(
+            workload_type="background",
+            pool_name="interactive-api-pool",
+            minimum_size=4,
+            maximum_size=8,
+            maximum_waiting=40,
+        ),
+    ]
+
+    observed = workload_runner.observed_pool_configuration(rows)
+
+    assert observed["unique_pool_count"] == 1
+    assert observed["combined_min_size"] == 4
+    assert observed["combined_max_size"] == 8
+    assert observed["foreground"] == observed["background"]
+
+
+def test_observed_pool_configuration_combines_isolated_budgets() -> None:
+    """Isolated foreground and background pools must both be counted."""
+
+    rows = [
+        build_pool_evidence_row(
+            workload_type="foreground",
+            pool_name="interactive-api-pool",
+            minimum_size=3,
+            maximum_size=6,
+            maximum_waiting=40,
+        ),
+        build_pool_evidence_row(
+            workload_type="background",
+            pool_name="background-worker-pool",
+            minimum_size=1,
+            maximum_size=2,
+            maximum_waiting=10,
+        ),
+    ]
+
+    observed = workload_runner.observed_pool_configuration(rows)
+
+    assert observed["unique_pool_count"] == 2
+    assert observed["combined_min_size"] == 4
+    assert observed["combined_max_size"] == 8
+    assert (
+        observed["foreground"]["pool_name"]
+        == "interactive-api-pool"
+    )
+    assert (
+        observed["background"]["pool_name"]
+        == "background-worker-pool"
+    )
+
+
+def test_observed_pool_configuration_rejects_conflicting_rows() -> None:
+    """One workload cannot report multiple runtime pool budgets."""
+
+    rows = [
+        build_pool_evidence_row(
+            workload_type="foreground",
+            pool_name="interactive-api-pool",
+            minimum_size=4,
+            maximum_size=8,
+            maximum_waiting=40,
+        ),
+        build_pool_evidence_row(
+            workload_type="foreground",
+            pool_name="interactive-api-pool",
+            minimum_size=4,
+            maximum_size=9,
+            maximum_waiting=40,
+        ),
+    ]
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "Foreground evidence contains conflicting "
+            "pool configurations"
+        ),
+    ):
+        workload_runner.observed_pool_configuration(rows)
+
+
+def test_extract_pool_statistics_rejects_missing_configuration() -> None:
+    """Incomplete runtime pool configuration cannot become evidence."""
+
+    payload = {
+        "database_resources": {
+            "connection_strategy": "bounded_pool",
+            "pool_topology": "shared_pool",
+            "workload": "foreground",
+            "pool": {
+                "name": "interactive-api-pool",
+                "configuration": {
+                    "min_size": 4,
+                    "max_size": 8,
+                    "timeout_seconds": 5.0,
+                    "startup_timeout_seconds": 30.0,
+                },
+                "statistics": {
+                    "pool_size": 4,
+                    "pool_available": 3,
+                    "requests_waiting": 0,
+                },
+            },
+        },
+    }
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "Bounded-pool response is missing configuration fields: "
+            "max_waiting"
+        ),
+    ):
+        workload_runner.extract_pool_statistics(
+            payload,
+            expected_pool_topology="shared_pool",
+        )
+
+
+def test_validate_pool_topology_rejects_runtime_mismatch() -> None:
+    """Requested and observed pool topologies must agree."""
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "Expected database pool topology 'shared_pool', "
+            "but the API reported 'isolated_pools'"
+        ),
+    ):
+        workload_runner.validate_pool_topology(
+            expected_pool_topology="shared_pool",
+            observed_pool_topology="isolated_pools",
+        )
+
 
 def test_build_configuration_uses_deterministic_worker_distribution() -> None:
     """Each worker must receive an exact, repeatable request count."""
@@ -38,6 +386,8 @@ def test_build_configuration_uses_deterministic_worker_distribution() -> None:
     configuration = workload_runner.build_configuration(
         build_arguments()
     )
+
+    assert configuration.expected_pool_topology == "shared_pool"
 
     assert configuration.foreground.request_count == 20
     assert configuration.foreground.concurrency == 4
@@ -333,6 +683,67 @@ def build_empty_workload_summary() -> dict[str, Any]:
     }
 
 
+
+def test_observed_pool_topology_returns_verified_runtime_value() -> None:
+    """Successful request evidence identifies the runtime topology."""
+
+    rows = [
+        {
+            "outcome": "success",
+            "pool_topology": "isolated_pools",
+        },
+        {
+            "outcome": "success",
+            "pool_topology": "isolated_pools",
+        },
+        {
+            "outcome": "failure",
+            "pool_topology": "shared_pool",
+        },
+    ]
+
+    assert (
+        workload_runner.observed_pool_topology(rows)
+        == "isolated_pools"
+    )
+
+
+def test_observed_pool_topology_returns_none_without_successes() -> None:
+    """A failed run must not invent observed topology evidence."""
+
+    rows = [
+        {
+            "outcome": "failure",
+            "pool_topology": "",
+        }
+    ]
+
+    assert workload_runner.observed_pool_topology(rows) is None
+
+
+def test_observed_pool_topology_rejects_conflicting_evidence() -> None:
+    """One run cannot credibly report two successful topologies."""
+
+    rows = [
+        {
+            "outcome": "success",
+            "pool_topology": "shared_pool",
+        },
+        {
+            "outcome": "success",
+            "pool_topology": "isolated_pools",
+        },
+    ]
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "Run contains conflicting observed pool topologies: "
+            "isolated_pools, shared_pool"
+        ),
+    ):
+        workload_runner.observed_pool_topology(rows)
+
 def build_empty_phase_summary() -> dict[str, Any]:
     """Build an empty first-request or later-request summary."""
 
@@ -385,6 +796,7 @@ def test_write_run_artifacts_creates_reviewable_evidence(
             "request_id": "example-request",
             "client_elapsed_ms": 10.0,
             "outcome": "success",
+            "pool_topology": "isolated_pools",
             "encounter_ids": [],
         }
     )
@@ -394,6 +806,29 @@ def test_write_run_artifacts_creates_reviewable_evidence(
         "scenario": "shared_pool_mixed_workload",
         "api_base_url": "http://localhost:8000",
         "expected_connection_strategy": "bounded_pool",
+        "expected_pool_topology": "isolated_pools",
+        "observed_pool_topology": "isolated_pools",
+        "observed_pool_configuration": {
+            "foreground": {
+                "pool_name": "interactive-api-pool",
+                "min_size": 3,
+                "max_size": 6,
+                "timeout_seconds": 5.0,
+                "startup_timeout_seconds": 30.0,
+                "max_waiting": 40,
+            },
+            "background": {
+                "pool_name": "background-worker-pool",
+                "min_size": 1,
+                "max_size": 2,
+                "timeout_seconds": 5.0,
+                "startup_timeout_seconds": 30.0,
+                "max_waiting": 10,
+            },
+            "unique_pool_count": 2,
+            "combined_min_size": 4,
+            "combined_max_size": 8,
+        },
         "configuration": {
             "foreground": {
                 "request_count": 1,
@@ -459,6 +894,7 @@ def test_write_run_artifacts_creates_reviewable_evidence(
     assert len(csv_rows) == 1
     assert csv_rows[0]["request_id"] == "example-request"
     assert csv_rows[0]["request_phase"] == "first_request"
+    assert csv_rows[0]["pool_topology"] == "isolated_pools"
 
     json_report = json.loads(
         paths["json_report"].read_text(
@@ -467,6 +903,20 @@ def test_write_run_artifacts_creates_reviewable_evidence(
     )
 
     assert json_report["run_id"] == "example-run"
+    assert (
+        json_report["expected_pool_topology"]
+        == "isolated_pools"
+    )
+    assert (
+        json_report["observed_pool_topology"]
+        == "isolated_pools"
+    )
+    assert (
+        json_report["observed_pool_configuration"][
+            "combined_max_size"
+        ]
+        == 8
+    )
 
     markdown_report = paths["markdown_report"].read_text(
         encoding="utf-8",
@@ -483,3 +933,19 @@ def test_write_run_artifacts_creates_reviewable_evidence(
     )
 
     assert "`request-results.csv`" in markdown_report
+    assert (
+        "Pool topology expected: `isolated_pools`"
+        in markdown_report
+    )
+    assert (
+        "Pool topology observed: `isolated_pools`"
+        in markdown_report
+    )
+    assert (
+        "uses the configured bounded connection-pool topology"
+        in markdown_report
+    )
+    assert (
+        "use the same bounded database connection pool"
+        not in markdown_report
+    )
