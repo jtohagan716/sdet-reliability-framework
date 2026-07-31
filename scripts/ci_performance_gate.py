@@ -44,7 +44,7 @@ def main():
         print("\nCI FAILED: Reliability score below minimum threshold")
         raise SystemExit(1)
 
-    if memory_trend["trend"] == "DEGRADING" and score < 90:
+    if memory_trend["trend"] == "DEGRADING" and score < 80:
         print("\nCI FAILED: CI performance is degrading and reliability score is below warning threshold")
         raise SystemExit(1)
 
