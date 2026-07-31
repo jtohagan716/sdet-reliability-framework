@@ -29,6 +29,7 @@ jobs:
     env:
       PYTHONPATH: ${{ github.workspace }}
       DATABASE_CONNECTION_STRATEGY: connection_per_operation
+      PATIENT_DATA_SOURCE: memory
 
     steps:
       - name: Checkout repository
@@ -74,8 +75,13 @@ jobs:
       - name: Run Python reliability, security, and contract test suite
         run: python -m pytest -q --junitxml=reports/pytest-results.xml
 
-      - name: Run performance CI gate
-        run: python scripts/ci_performance_gate.py
+      - name: Run local API performance CI gate
+        run: |
+          python scripts/run_performance_baseline.py `
+            --base-url http://127.0.0.1:8000 `
+            --iterations 30 `
+            --max-p95-ms 250 `
+            --output reports/ci-performance-baseline.md
 
       - name: Upload Pytest results
         if: always()
@@ -85,6 +91,7 @@ jobs:
           path: |
             reports/pytest-results.xml
             reports/api-contract-validation-results.xml
+            reports/ci-performance-baseline.md
           if-no-files-found: warn
 
   api-and-ui-validation:

@@ -129,6 +129,17 @@ def summarize_results(results: list[RequestResult]) -> list[dict[str, object]]:
     return summaries
 
 
+def find_p95_threshold_failures(
+    summaries: list[dict[str, object]],
+    max_p95_ms: float,
+) -> list[dict[str, object]]:
+    return [
+        summary
+        for summary in summaries
+        if float(summary["p95_ms"]) > max_p95_ms
+    ]
+
+
 def write_markdown_report(
     output_path: Path,
     base_url: str,
@@ -197,12 +208,28 @@ def main() -> int:
         help="Number of requests to send per scenario.",
     )
     parser.add_argument(
+        "--max-p95-ms",
+        type=float,
+        default=1000.0,
+        help="Maximum permitted p95 latency for each scenario.",
+    )
+    parser.add_argument(
         "--output",
         default="reports/performance_baseline_v0.6.0.md",
         help="Markdown report output path.",
     )
 
     args = parser.parse_args()
+
+    if args.iterations < 1:
+        parser.error(
+            "--iterations must be greater than zero."
+        )
+
+    if args.max_p95_ms <= 0:
+        parser.error(
+            "--max-p95-ms must be greater than zero."
+        )
 
     results: list[RequestResult] = []
 
@@ -211,6 +238,12 @@ def main() -> int:
             results.append(call_endpoint(args.base_url, scenario))
 
     summaries = summarize_results(results)
+
+    threshold_failures = find_p95_threshold_failures(
+        summaries,
+        args.max_p95_ms,
+    )
+
     output_path = Path(args.output)
     write_markdown_report(output_path, args.base_url, args.iterations, summaries)
 
@@ -227,6 +260,20 @@ def main() -> int:
 
     if unexpected_failures:
         print(f"Unexpected failures detected: {unexpected_failures}")
+        return 1
+
+    if threshold_failures:
+        print(
+            "P95 latency threshold exceeded: "
+            f"maximum permitted={args.max_p95_ms} ms"
+        )
+
+        for summary in threshold_failures:
+            print(
+                f"{summary['scenario']}: "
+                f"p95={summary['p95_ms']} ms"
+            )
+
         return 1
 
     print("Performance baseline completed successfully.")

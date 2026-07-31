@@ -1,46 +1,120 @@
-from framework.performance.runner import run_performance_suite
+﻿from types import SimpleNamespace
 
-from framework.reporting.performance_reporter import (
-    write_csv_report,
-    write_json_report,
-)
+import framework.performance.runner as performance_runner
 
 
-def test_api_latency_pipeline():
-    result = run_performance_suite(
-        "https://example.com",
-        iterations=8,
-        threshold_ms=3000,
+def test_api_latency_pipeline_contract(monkeypatch):
+    def fake_measure_api_latency(
+        url: str,
+        iterations: int,
+    ) -> dict[str, object]:
+        return {
+            "url": url,
+            "iterations": iterations,
+            "min_ms": 80.0,
+            "max_ms": 120.0,
+            "avg_ms": 100.0,
+            "stdev_ms": 5.0,
+            "p50_ms": 98.0,
+            "p95_ms": 115.0,
+            "p99_ms": 119.0,
+        }
+
+    monkeypatch.setattr(
+        performance_runner,
+        "measure_api_latency",
+        fake_measure_api_latency,
     )
 
-    # Persist performance intelligence artifacts
-    write_csv_report(result)
-    write_json_report(result)
+    monkeypatch.setattr(
+        performance_runner,
+        "detect_regression",
+        lambda average_ms: {
+            "status": "STABLE",
+            "allowed_max": 125.0,
+        },
+    )
 
-    # Core telemetry contract
-    assert "avg_ms" in result
-    assert "stdev_ms" in result
-    assert "p50_ms" in result
-    assert "p95_ms" in result
-    assert "p99_ms" in result
+    monkeypatch.setattr(
+        performance_runner,
+        "detect_p95_regression",
+        lambda p95_ms: {
+            "status": "STABLE",
+        },
+    )
 
-    # Reliability intelligence contract
-    assert "regression" in result
-    assert "p95_regression" in result
-    assert "trend" in result
-    assert "reliability_score" in result
-    assert "verdict" in result
+    monkeypatch.setattr(
+        performance_runner,
+        "get_baseline",
+        lambda: 100.0,
+    )
 
-    # Release intelligence contract
-    assert "risk_level" in result
-    assert "risk_points" in result
-    assert "release_decision" in result
-    assert "release_reason" in result
+    monkeypatch.setattr(
+        performance_runner,
+        "get_trend",
+        lambda: "STABLE",
+    )
 
-    # Valid status outcomes
-    assert result["status"] in [
-        "PASS",
-        "FAIL_BASELINE",
-        "FAIL_TREND",
-        "FAIL_STABILITY",
-    ]
+    monkeypatch.setattr(
+        performance_runner,
+        "calculate_reliability_score",
+        lambda result, trend: SimpleNamespace(
+            score=96.0,
+            verdict="RELIABLE",
+            breakdown={
+                "latency": 40,
+                "stability": 30,
+                "trend": 26,
+            },
+        ),
+    )
+
+    monkeypatch.setattr(
+        performance_runner,
+        "calculate_release_risk",
+        lambda result: {
+            "risk_level": "LOW",
+            "risk_points": 0,
+        },
+    )
+
+    monkeypatch.setattr(
+        performance_runner,
+        "evaluate_release",
+        lambda result: {
+            "decision": "GO",
+            "reason": "Deterministic test conditions passed.",
+        },
+    )
+
+    result = performance_runner.run_performance_suite(
+        "http://local.test/health",
+        iterations=8,
+        threshold_ms=250,
+    )
+
+    assert result["url"] == "http://local.test/health"
+    assert result["iterations"] == 8
+
+    assert result["avg_ms"] == 100.0
+    assert result["stdev_ms"] == 5.0
+    assert result["p50_ms"] == 98.0
+    assert result["p95_ms"] == 115.0
+    assert result["p99_ms"] == 119.0
+
+    assert result["regression"] == "STABLE"
+    assert result["p95_regression"] == "STABLE"
+    assert result["baseline"] == 100.0
+    assert result["allowed_max"] == 125.0
+    assert result["trend"] == "STABLE"
+    assert result["status"] == "PASS"
+
+    assert result["reliability_score"] == 96.0
+    assert result["verdict"] == "RELIABLE"
+    assert result["risk_level"] == "LOW"
+    assert result["risk_points"] == 0
+    assert result["release_decision"] == "GO"
+    assert (
+        result["release_reason"]
+        == "Deterministic test conditions passed."
+    )
