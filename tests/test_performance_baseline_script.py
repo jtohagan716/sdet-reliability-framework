@@ -2,6 +2,7 @@ from pathlib import Path
 
 from scripts.run_performance_baseline import (
     RequestResult,
+    find_p95_threshold_failures,
     percentile,
     summarize_results,
     write_markdown_report,
@@ -51,6 +52,63 @@ def test_summarize_results_counts_passes_and_failures():
         assert summary["passed"] == 1
         assert summary["failed"] == 0
         assert summary["error_rate_percent"] == 0.0
+
+
+def test_find_p95_threshold_failures_returns_slow_scenarios():
+    summaries = [
+        {
+            "scenario": "health_check",
+            "p95_ms": 25.0,
+        },
+        {
+            "scenario": "patient_lookup_success",
+            "p95_ms": 1200.0,
+        },
+    ]
+
+    failures = find_p95_threshold_failures(
+        summaries,
+        max_p95_ms=1000.0,
+    )
+
+    assert len(failures) == 1
+    assert failures[0]["scenario"] == "patient_lookup_success"
+
+
+def test_find_p95_threshold_failures_returns_empty_when_within_limit():
+    summaries = [
+        {
+            "scenario": "health_check",
+            "p95_ms": 25.0,
+        },
+        {
+            "scenario": "patient_lookup_success",
+            "p95_ms": 75.0,
+        },
+    ]
+
+    failures = find_p95_threshold_failures(
+        summaries,
+        max_p95_ms=1000.0,
+    )
+
+    assert failures == []
+
+
+def test_threshold_allows_value_equal_to_limit():
+    summaries = [
+        {
+            "scenario": "health_check",
+            "p95_ms": 1000.0,
+        }
+    ]
+
+    failures = find_p95_threshold_failures(
+        summaries,
+        max_p95_ms=1000.0,
+    )
+
+    assert failures == []
 
 
 def test_write_markdown_report_creates_expected_file(tmp_path):
