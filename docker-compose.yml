@@ -1,4 +1,4 @@
-﻿services:
+services:
   jaeger:
     image: jaegertracing/all-in-one:latest
     container_name: sdet-jaeger
@@ -98,8 +98,19 @@
       - api
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:13.1.0
     container_name: sdet-grafana
+    environment:
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_PLUGINS_PREINSTALL_AUTO_UPDATE: "false"
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "wget -q -O /dev/null http://127.0.0.1:3000/api/health || exit 1"
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 30s
     ports:
       - "3000:3000"
     depends_on:
