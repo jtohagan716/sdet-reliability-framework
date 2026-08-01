@@ -1,3 +1,6 @@
+import json
+from urllib.error import URLError
+from urllib.request import urlopen
 import shutil
 import subprocess
 import sys
@@ -63,9 +66,17 @@ def postgres_service_is_available() -> bool:
 
 
 def api_service_is_available() -> bool:
-    result = run_command(["curl.exe", "http://localhost:8000/health"])
+    try:
+        with urlopen(
+            "http://localhost:8000/health",
+            timeout=5,
+        ) as response:
+            status_code = response.status
+            payload = json.load(response)
+    except (OSError, URLError, ValueError):
+        return False
 
-    return result.returncode == 0 and '"status":"UP"' in result.stdout
+    return status_code == 200 and payload.get("status") == "UP"
 
 
 def run_sql_script(script_path: Path) -> subprocess.CompletedProcess[str]:
